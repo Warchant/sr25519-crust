@@ -10,6 +10,9 @@ crate-type = ["dylib", "lib", "staticlib"]
 
 [dependencies]
 schnorrkel = "0.1.1"
+hex = "0.3.2"
+rand = "0.6.5"
+hex-literal = "0.2.0"
 
 [build-dependencies]
 cbindgen = "0.8.5"
