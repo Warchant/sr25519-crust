@@ -1,7 +1,15 @@
 [package]
-name = "sr25519-crust"
+name = "sr25519crust"
 version = "0.1.0"
 authors = ["Bogdan Vaneev <warchantua@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "sr25519crust"
+crate-type = ["dylib", "lib", "staticlib"]
+
 [dependencies]
+schnorrkel = "0.1.1"
+
+[build-dependencies]
+cbindgen = "0.8.5"
