@@ -196,8 +196,8 @@ pub unsafe extern "C" fn ext_sr_verify(
 	message_length: usize,
 	public_ptr: *const u8,
 ) -> bool {
-	let public = slice::from_raw_parts(public_ptr, 32);
-	let signature = slice::from_raw_parts(signature_ptr, 64);
+	let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
+	let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE);
 	let message = slice::from_raw_parts(message_ptr, message_length as usize);
 	let signature = match Signature::from_bytes(signature) {
 		Ok(signature) => signature,
@@ -264,33 +264,35 @@ pub mod tests {
 		assert!(signature.len() == SIGNATURE_LENGTH);
 	}
 
-	// #[test]
-	// fn can_verify_message() {
-	// 	let seed = generate_random_seed();
-	// 	let keypair_ptr = unsafe { ext_sr_from_seed(seed.as_ptr()) };
-	// 	let keypair = unsafe { slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE) };
-	// 	let private = &keypair[0..SECRET_KEY_LENGTH];
-	// 	let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-	// 	let message = b"this is a message";
-	// 	let signature_ptr = unsafe {
-	// 		ext_sr_sign(
-	// 			public.as_ptr(),
-	// 			private.as_ptr(),
-	// 			message.as_ptr(),
-	// 			message.len(),
-	// 		)
-	// 	};
-	// 	let is_valid = unsafe {
-	// 		ext_sr_verify(
-	// 			signature_ptr,
-	// 			message.as_ptr(),
-	// 			message.len(),
-	// 			public.as_ptr(),
-	// 		)
-	// 	};
-	//
-	// 	assert!(is_valid);
-	// }
+	#[test]
+	fn can_verify_message() {
+		let seed = generate_random_seed();
+		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		let private = &keypair[0..SECRET_KEY_LENGTH];
+		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+		let message = b"this is a message";
+		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+		unsafe {
+			ext_sr_sign(
+				signature.as_mut_ptr(),
+				public.as_ptr(),
+				private.as_ptr(),
+				message.as_ptr(),
+				message.len(),
+			)
+		};
+		let is_valid = unsafe {
+			ext_sr_verify(
+				signature.as_ptr(),
+				message.as_ptr(),
+				message.len(),
+				public.as_ptr(),
+			)
+		};
+
+		assert!(is_valid);
+	}
 
 	// #[test]
 	// fn soft_derives_pair() {
