@@ -16,5 +16,4 @@ add_custom_target(
   ALL
   COMMAND cbindgen -o ${CMAKE_BINARY_DIR}/sr25519.h
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  DEPENDS build_rust
 )
