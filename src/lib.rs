@@ -1,5 +1,6 @@
 extern crate schnorrkel;
 
+// Copyright 2019 Soramitsu via https://github.com/Warchant/sr25519-crust
 // Copyright 2019 Paritytech via https://github.com/paritytech/schnorrkel-js/
 // Copyright 2019 @polkadot/wasm-schnorrkel authors & contributors
 // This software may be modified and distributed under the terms
@@ -61,19 +62,30 @@ fn create_secret(secret: &[u8]) -> SecretKey {
 	}
 }
 
+/// Size of input SEED for derivation, bytes
 pub const SR25519_SEED_SIZE: usize = 32;
+
+/// Size of CHAINCODE, bytes
 pub const SR25519_CHAINCODE_SIZE: usize = 32;
+
+/// Size of SR25519 PUBLIC KEY, bytes
 pub const SR25519_PUBLIC_SIZE: usize = 32;
+
+/// Size of SR25519 PRIVATE (SECRET) KEY, which consists of [32 bytes key | 32 bytes nonce]
 pub const SR25519_SECRET_SIZE: usize = 64;
+
+/// Size of SR25519 SIGNATURE, bytes
 pub const SR25519_SIGNATURE_SIZE: usize = 64;
+
+/// Size of SR25519 KEYPAIR. [32 bytes key | 32 bytes nonce | 32 bytes public]
 pub const SR25519_KEYPAIR_SIZE: usize = 96;
 
 /// Perform a derivation on a secret
 ///
-/// * secret: UIntArray with 64 bytes
-/// * cc: UIntArray with 32 bytes
+/// * keypair_out: pre-allocated output buffer of SR25519_KEYPAIR_SIZE bytes
+/// * pair_ptr: existing keypair - input buffer of SR25519_KEYPAIR_SIZE bytes
+/// * cc_ptr: chaincode - input buffer of SR25519_CHAINCODE_SIZE bytes
 ///
-/// returned vector the derived keypair as a array of 96 bytes
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_derive_keypair_hard(
@@ -88,15 +100,16 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_hard(
 		.hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
 		.0
 		.expand_to_keypair();
+
 	ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
 }
 
 /// Perform a derivation on a secret
 ///
-/// * secret: UIntArray with 64 bytes
-/// * cc: UIntArray with 32 bytes
+/// * keypair_out: pre-allocated output buffer of SR25519_KEYPAIR_SIZE bytes
+/// * pair_ptr: existing keypair - input buffer of SR25519_KEYPAIR_SIZE bytes
+/// * cc_ptr: chaincode - input buffer of SR25519_CHAINCODE_SIZE bytes
 ///
-/// returned vector the derived keypair as a array of 96 bytes
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
@@ -115,10 +128,10 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
 
 /// Perform a derivation on a publicKey
 ///
-/// * pubkey: UIntArray with 32 bytes
-/// * cc: UIntArray with 32 bytes
+/// * pubkey_out: pre-allocated output buffer of SR25519_PUBLIC_SIZE bytes
+/// * public_ptr: public key - input buffer of SR25519_PUBLIC_SIZE bytes
+/// * cc_ptr: chaincode - input buffer of SR25519_CHAINCODE_SIZE bytes
 ///
-/// returned vector is the derived publicKey as a array of 32 bytes
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_derive_public_soft(
@@ -136,10 +149,9 @@ pub unsafe extern "C" fn ext_sr_derive_public_soft(
 
 /// Generate a key pair.
 ///
-/// * seed: UIntArray with 32 element
+/// * keypair_out: keypair [32b key | 32b nonce | 32b public], pre-allocated output buffer of SR25519_KEYPAIR_SIZE bytes
+/// * seed: generation seed - input buffer of SR25519_SEED_SIZE bytes
 ///
-/// returned vector is the concatenation of first the private key (64 bytes)
-/// followed by the public key (32) bytes, total size is 96 bytes.
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_from_seed(keypair_out: *mut u8, seed_ptr: *const u8) {
@@ -153,12 +165,12 @@ pub unsafe extern "C" fn ext_sr_from_seed(keypair_out: *mut u8, seed_ptr: *const
 /// The combination of both public and private key must be provided.
 /// This is effectively equivalent to a keypair.
 ///
-/// * public: UIntArray with 32 element
-/// * private: UIntArray with 64 element
-/// * message: Arbitrary length UIntArray
+/// * signature_out: output buffer of ED25519_SIGNATURE_SIZE bytes
+/// * public_ptr: public key - input buffer of SR25519_PUBLIC_SIZE bytes
+/// * secret_ptr: private key (secret) - input buffer of SR25519_SECRET_SIZE bytes
+/// * message_ptr: Arbitrary message; input buffer of size message_length
 /// * message_length: Length of a message
 ///
-/// * returned vector is the signature consisting of 64 bytes.
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_sign(
@@ -183,10 +195,10 @@ pub unsafe extern "C" fn ext_sr_sign(
 
 /// Verify a message and its corresponding against a public key;
 ///
-/// * signature: UIntArray with 64 element
-/// * message: Arbitrary length message
+/// * signature_ptr: verify this signature
+/// * message_ptr: Arbitrary message; input buffer of message_length bytes
 /// * message_length: Message size
-/// * pubkey: UIntArray with 32 element
+/// * public_ptr: verify with this public key; input buffer of SR25519_PUBLIC_SIZE bytes
 ///
 /// * returned true if signature is valid, false otherwise
 #[allow(unused_attributes)]
