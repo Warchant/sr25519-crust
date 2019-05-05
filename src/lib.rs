@@ -320,16 +320,17 @@ pub mod tests {
 		assert_eq!(derived, expected);
 	}
 
-	// #[test]
-	// fn hard_derives_pair() {
-	// 	let cc = hex!("14416c6963650000000000000000000000000000000000000000000000000000"); // Alice
-	// 	let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
-	// 	let expected = hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
-	// 	let keypair_ptr = unsafe { ext_sr_from_seed(seed.as_ptr()) };
-	// 	let derived_ptr = unsafe { ext_sr_derive_keypair_hard(keypair_ptr, cc.as_ptr()) };
-	// 	let derived = unsafe { slice::from_raw_parts(derived_ptr, SR25519_KEYPAIR_SIZE) };
-	// 	let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-	//
-	// 	assert_eq!(public, expected);
-	// }
+	#[test]
+	fn hard_derives_pair() {
+		let cc = hex!("14416c6963650000000000000000000000000000000000000000000000000000"); // Alice
+		let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
+		let expected = hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
+		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
+		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { ext_sr_derive_keypair_hard(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
+		let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+
+		assert_eq!(public, expected);
+	}
 }
