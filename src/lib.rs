@@ -239,7 +239,7 @@ pub mod tests {
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
 		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 
-		assert!(keypair.len() == KEYPAIR_LENGTH);
+		assert_eq!(keypair.len(), KEYPAIR_LENGTH);
 		println!("{:?}", keypair.to_vec());
 	}
 
@@ -274,7 +274,7 @@ pub mod tests {
 			)
 		};
 
-		assert!(signature.len() == SIGNATURE_LENGTH);
+		assert_eq!(signature.len(), SIGNATURE_LENGTH);
 	}
 
 	#[test]
