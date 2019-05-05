@@ -122,16 +122,16 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_derive_public_soft(
+	pubkey_out: *mut u8,
 	public_ptr: *const u8,
 	cc_ptr: *const u8,
-) -> *mut u8 {
+) {
 	let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
 	let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
-	create_public(public)
+	let p = create_public(public)
 		.derived_key_simple(create_cc(cc), &[])
-		.0
-		.to_bytes()
-		.as_mut_ptr()
+		.0;
+	ptr::copy(p.to_bytes().as_ptr(), pubkey_out, SR25519_PUBLIC_SIZE);
 }
 
 /// Generate a key pair.
@@ -309,16 +309,16 @@ pub mod tests {
 		assert_eq!(public, expected);
 	}
 
-	// #[test]
-	// fn soft_derives_public() {
-	// 	let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
-	// 	let public = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
-	// 	let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
-	// 	let derived_ptr = unsafe { ext_sr_derive_public_soft(public.as_ptr(), cc.as_ptr()) };
-	// 	let derived = unsafe { slice::from_raw_parts(derived_ptr, SR25519_PUBLIC_SIZE) };
-	//
-	// 	assert_eq!(derived, expected);
-	// }
+	#[test]
+	fn soft_derives_public() {
+		let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
+		let public = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
+		let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
+		let mut derived = [0u8; SR25519_PUBLIC_SIZE];
+		unsafe { ext_sr_derive_public_soft(derived.as_mut_ptr(), public.as_ptr(), cc.as_ptr()) };
+
+		assert_eq!(derived, expected);
+	}
 
 	// #[test]
 	// fn hard_derives_pair() {
