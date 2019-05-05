@@ -161,19 +161,23 @@ pub unsafe extern "C" fn ext_sr_from_seed(keypair_out: *mut u8, seed_ptr: *const
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_sign(
+	signature_out: *mut u8,
 	public_ptr: *const u8,
 	secret_ptr: *const u8,
 	message_ptr: *const u8,
 	message_length: usize,
-) -> *mut u8 {
+) {
 	let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
 	let secret = slice::from_raw_parts(secret_ptr, SR25519_SECRET_SIZE);
 	let message = slice::from_raw_parts(message_ptr, message_length as usize);
 
-	create_secret(secret)
-		.sign_simple(SIGNING_CTX, message, &create_public(public))
-		.to_bytes()
-		.as_mut_ptr()
+	let sig = create_secret(secret).sign_simple(SIGNING_CTX, message, &create_public(public));
+
+	ptr::copy(
+		sig.to_bytes().as_ptr(),
+		signature_out,
+		SR25519_SIGNATURE_SIZE,
+	);
 }
 
 /// Verify a message and its corresponding against a public key;
@@ -237,27 +241,28 @@ pub mod tests {
 		assert_eq!(public, expected);
 	}
 
-	// #[test]
-	// fn can_sign_message() {
-	// 	let seed = generate_random_seed();
-	// 	let keypair_ptr = unsafe { ext_sr_from_seed(seed.as_ptr()) };
-	// 	let keypair = unsafe { slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE) };
-	// 	let private = &keypair[0..SECRET_KEY_LENGTH];
-	// 	let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-	// 	let message = b"this is a message";
-	// 	let signature_ptr = unsafe {
-	// 		ext_sr_sign(
-	// 			public.as_ptr(),
-	// 			private.as_ptr(),
-	// 			message.as_ptr(),
-	// 			message.len(),
-	// 		)
-	// 	};
-	//
-	// 	let signature = unsafe { slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE) };
-	//
-	// 	assert!(signature.len() == SIGNATURE_LENGTH);
-	// }
+	#[test]
+	fn can_sign_message() {
+		let seed = generate_random_seed();
+		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		let private = &keypair[0..SECRET_KEY_LENGTH];
+		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+		let message = b"this is a message";
+
+		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+		unsafe {
+			ext_sr_sign(
+				signature.as_mut_ptr(),
+				public.as_ptr(),
+				private.as_ptr(),
+				message.as_ptr(),
+				message.len(),
+			)
+		};
+
+		assert!(signature.len() == SIGNATURE_LENGTH);
+	}
 
 	// #[test]
 	// fn can_verify_message() {
