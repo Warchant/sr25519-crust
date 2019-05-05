@@ -3,7 +3,7 @@ include_guard = "__SR25519_INCLUDE_GUARD_H__"
 include_version = true
 line_length = 80
 tab_width = 2
-language = "C++"
+language = "C"
 style = "Both"
 documentation_style = "Doxy"
 
