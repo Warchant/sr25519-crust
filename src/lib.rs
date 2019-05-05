@@ -100,16 +100,17 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_hard(
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
+	keypair_out: *mut u8,
 	pair_ptr: *const u8,
 	cc_ptr: *const u8,
-) -> *mut u8 {
+) {
 	let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE);
 	let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
-	create_from_pair(pair)
+	let kp = create_from_pair(pair)
 		.derived_key_simple(create_cc(cc), &[])
-		.0
-		.to_bytes()
-		.as_mut_ptr()
+		.0;
+
+	ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
 }
 
 /// Perform a derivation on a publicKey
@@ -294,18 +295,19 @@ pub mod tests {
 		assert!(is_valid);
 	}
 
-	// #[test]
-	// fn soft_derives_pair() {
-	// 	let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
-	// 	let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
-	// 	let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
-	// 	let keypair_ptr = unsafe { ext_sr_from_seed(seed.as_ptr()) };
-	// 	let derived_ptr = unsafe { ext_sr_derive_keypair_soft(keypair_ptr, cc.as_ptr()) };
-	// 	let derived = unsafe { slice::from_raw_parts(derived_ptr, SR25519_KEYPAIR_SIZE) };
-	// 	let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-	//
-	// 	assert_eq!(public, expected);
-	// }
+	#[test]
+	fn soft_derives_pair() {
+		let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
+		let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
+		let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
+		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
+		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { ext_sr_derive_keypair_soft(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
+		let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+
+		assert_eq!(public, expected);
+	}
 
 	// #[test]
 	// fn soft_derives_public() {
