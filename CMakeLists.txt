@@ -10,11 +10,7 @@ endif()
 
 
 set(a_path ${CMAKE_BINARY_DIR}/libsr25519crust.a)
-set(dylib_path ${CMAKE_BINARY_DIR}/libsr25519crust.dylib)
 set(include_path ${CMAKE_BINARY_DIR}/sr25519)
-
-
-include(GNUInstallDirs)
 
 
 ### setup tasks
@@ -28,7 +24,7 @@ add_custom_target(
 )
 
 add_custom_target(
-  sr25519
+  bindings
   ALL
   COMMAND cbindgen -o ${include_path}/sr25519.h
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -42,28 +38,25 @@ add_test(
 )
 
 
-
 ### setup install task
+include(GNUInstallDirs)
 function(ifd_install what where)
-  if(EXISTS ${what})
-    message(STATUS "make install: '${what}' will be installed to '${where}'")
-    if (IS_DIRECTORY ${what})
-      install(
-        DIRECTORY ${what}
-        DESTINATION ${where}
-      )
-    else()
-      install(
-        FILES ${what}
-        DESTINATION ${where}
-      )
-    endif()
+  message(STATUS "make install: '${what}' will be installed to '${where}'")
+  if (IS_DIRECTORY ${what})
+    install(
+      DIRECTORY ${what}
+      DESTINATION ${where}
+      CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+    )
   else()
-    message(STATUS "make install: '${what}' will not be installed")
+    install(
+      FILES ${what}
+      DESTINATION ${where}
+      CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+    )
   endif()
 endfunction()
 
 
 ifd_install(${include_path} ${CMAKE_INSTALL_INCLUDEDIR})
 ifd_install(${a_path} ${CMAKE_INSTALL_LIBDIR})
-ifd_install(${dylib_path} ${CMAKE_INSTALL_LIBDIR})
