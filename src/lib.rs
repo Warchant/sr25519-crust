@@ -88,7 +88,7 @@ pub const SR25519_KEYPAIR_SIZE: usize = 96;
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_derive_keypair_hard(
+pub unsafe extern "C" fn sr25519_derive_keypair_hard(
 	keypair_out: *mut u8,
 	pair_ptr: *const u8,
 	cc_ptr: *const u8,
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_hard(
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
+pub unsafe extern "C" fn sr25519_derive_keypair_soft(
 	keypair_out: *mut u8,
 	pair_ptr: *const u8,
 	cc_ptr: *const u8,
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn ext_sr_derive_keypair_soft(
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_derive_public_soft(
+pub unsafe extern "C" fn sr25519_derive_public_soft(
 	pubkey_out: *mut u8,
 	public_ptr: *const u8,
 	cc_ptr: *const u8,
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn ext_sr_derive_public_soft(
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_from_seed(keypair_out: *mut u8, seed_ptr: *const u8) {
+pub unsafe extern "C" fn sr25519_keypair_from_seed(keypair_out: *mut u8, seed_ptr: *const u8) {
 	let seed = slice::from_raw_parts(seed_ptr, SR25519_SEED_SIZE);
 	let kp = create_from_seed(seed);
 	ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn ext_sr_from_seed(keypair_out: *mut u8, seed_ptr: *const
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_sign(
+pub unsafe extern "C" fn sr25519_sign(
 	signature_out: *mut u8,
 	public_ptr: *const u8,
 	secret_ptr: *const u8,
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn ext_sr_sign(
 /// * returned true if signature is valid, false otherwise
 #[allow(unused_attributes)]
 #[no_mangle]
-pub unsafe extern "C" fn ext_sr_verify(
+pub unsafe extern "C" fn sr25519_verify(
 	signature_ptr: *const u8,
 	message_ptr: *const u8,
 	message_length: usize,
@@ -237,7 +237,7 @@ pub mod tests {
 	fn can_create_keypair() {
 		let seed = generate_random_seed();
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 
 		assert_eq!(keypair.len(), KEYPAIR_LENGTH);
 		println!("{:?}", keypair.to_vec());
@@ -248,7 +248,7 @@ pub mod tests {
 		let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
 		let expected = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
 		assert_eq!(public, expected);
@@ -258,14 +258,14 @@ pub mod tests {
 	fn can_sign_message() {
 		let seed = generate_random_seed();
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 		let private = &keypair[0..SECRET_KEY_LENGTH];
 		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 		let message = b"this is a message";
 
 		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
 		unsafe {
-			ext_sr_sign(
+			sr25519_sign(
 				signature.as_mut_ptr(),
 				public.as_ptr(),
 				private.as_ptr(),
@@ -281,13 +281,13 @@ pub mod tests {
 	fn can_verify_message() {
 		let seed = generate_random_seed();
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 		let private = &keypair[0..SECRET_KEY_LENGTH];
 		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 		let message = b"this is a message";
 		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
 		unsafe {
-			ext_sr_sign(
+			sr25519_sign(
 				signature.as_mut_ptr(),
 				public.as_ptr(),
 				private.as_ptr(),
@@ -296,7 +296,7 @@ pub mod tests {
 			)
 		};
 		let is_valid = unsafe {
-			ext_sr_verify(
+			sr25519_verify(
 				signature.as_ptr(),
 				message.as_ptr(),
 				message.len(),
@@ -314,8 +314,8 @@ pub mod tests {
 		let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
 		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
-		unsafe { ext_sr_derive_keypair_soft(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_derive_keypair_soft(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
 		let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
 		assert_eq!(public, expected);
@@ -327,7 +327,7 @@ pub mod tests {
 		let public = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
 		let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
 		let mut derived = [0u8; SR25519_PUBLIC_SIZE];
-		unsafe { ext_sr_derive_public_soft(derived.as_mut_ptr(), public.as_ptr(), cc.as_ptr()) };
+		unsafe { sr25519_derive_public_soft(derived.as_mut_ptr(), public.as_ptr(), cc.as_ptr()) };
 
 		assert_eq!(derived, expected);
 	}
@@ -339,8 +339,8 @@ pub mod tests {
 		let expected = hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
 		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { ext_sr_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
-		unsafe { ext_sr_derive_keypair_hard(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		unsafe { sr25519_derive_keypair_hard(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
 		let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
 		assert_eq!(public, expected);
