@@ -15,8 +15,14 @@ HunterGate(
 project(sr25519crust CXX)
 enable_testing()
 
+include(FindPackageHandleStandardArgs)
 include(cmake/dependencies.cmake)
 include(cmake/functions.cmake)
+
+must_have_exe(rustc)
+must_have_exe(cargo)
+must_have_exe(cbindgen)
+
 include(rust.cmake)
 
 if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
@@ -26,5 +32,6 @@ if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   set(CMAKE_CXX_EXTENSIONS OFF)
   set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 endif()
+
 
 add_subdirectory(test)

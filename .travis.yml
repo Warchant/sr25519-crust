@@ -18,6 +18,7 @@ cache:
   ccache: true
   directories:
     - "$HOME/.ccache"
+    - "$HOME/.cargo"
     - "$HOME/Library/Caches/Homebrew"
 
 matrix:
@@ -35,6 +36,7 @@ matrix:
         homebrew:
           packages:
             - git
+            - rust
 
     - os: osx
       name: "OSX clang"
@@ -49,10 +51,11 @@ matrix:
         homebrew:
           packages:
             - git
+            - rust
 
 
     - os: linux
-      name: "Linux gcc8 Coverage"
+      name: "Linux gcc8"
       dist: xenial
       compiler: gcc
       addons:
@@ -66,6 +69,8 @@ matrix:
             - python3
             - python3-pip
             - python3-setuptools
+            - cargo
+            - rustc
       env:
         - _CC=gcc-8
         - _CXX=g++-8
@@ -90,6 +95,8 @@ matrix:
             - python3
             - python3-pip
             - python3-setuptools
+            - cargo
+            - rustc
       env:
         - _CC=clang-8
         - _CXX=clang++-8
@@ -104,7 +111,9 @@ install:
       fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
   - |
-    curl https://sh.rustup.rs -sSf | sh -s -- -y
+    export CC=${_CC}
+    export CXX=${_CXX}
+    cargo install cbindgen
 
 before_script:
   - cmake --version

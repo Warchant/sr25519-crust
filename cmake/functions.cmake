@@ -43,3 +43,13 @@ function(add_flag flag)
     add_compile_options(${flag})
   endif ()
 endfunction()
+
+add_library(deps UNKNOWN IMPORTED)
+
+function(must_have_exe exe)
+  find_program(${exe} ${exe})
+  find_package_handle_standard_args(deps ${exe})
+  if(NOT ${exe})
+    message(FATAL_ERROR "Can not find required binary: ${exe}")
+  endif()
+endfunction()

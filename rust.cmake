@@ -1,5 +1,3 @@
-include(FindPackageHandleStandardArgs)
-
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(path_prefix    "${CMAKE_BINARY_DIR}/release")
   set(release_option "--release")
