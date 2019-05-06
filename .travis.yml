@@ -104,7 +104,7 @@ install:
       fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
   - |
-    curl https://sh.rustup.rs -sSf | sh
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 before_script:
   - cmake --version
