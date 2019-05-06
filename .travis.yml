@@ -110,10 +110,6 @@ install:
         pip3 install --user pyyaml
       fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
-  - |
-    export CC=${_CC}
-    export CXX=${_CXX}
-    cargo install cbindgen
 
 before_script:
   - cmake --version
@@ -126,6 +122,7 @@ before_script:
 script:
   - export CC=${_CC}
   - export CXX=${_CXX}
+  - export PATH=~/.cargo/bin:$PATH
   - cmake . -Bbuild
   - cmake --build build -- -j2
   - cmake --build build --target test
