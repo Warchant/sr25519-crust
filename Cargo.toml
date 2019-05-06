@@ -10,7 +10,7 @@ name = "sr25519crust"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-schnorrkel = "0.1.1"
+schnorrkel = { version="0.1.1", features = ["nightly"] }
 
 [dev-dependencies]
 hex-literal = "0.1.4"

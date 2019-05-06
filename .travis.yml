@@ -118,11 +118,16 @@ before_script:
   - pip -V
   - pip3 -V
   - gcovr --version || true
+  - cargo --version
+  - rustc --version
 
 script:
   - export CC=${_CC}
   - export CXX=${_CXX}
   - export PATH=~/.cargo/bin:$PATH
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - rustup update
+  - cargo install --force cbindgen
   - cmake . -Bbuild
   - cmake --build build -- -j2
   - cmake --build build --target test
