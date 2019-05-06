@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "utils.hpp"
 #include <boost/algorithm/hex.hpp>
 #include <gtest/gtest.h>
 #include <string>
-#include "utils.hpp"
 
 extern "C" {
 #include <sr25519/sr25519.h>
 }
-
 
 struct Case1 {
   std::vector<uint8_t> seed;
@@ -23,6 +22,8 @@ struct KeypairFromSeed : public ::testing::TestWithParam<Case1> {
 };
 
 std::vector<Case1> KeypairFromSeed::cases = {
+    {std::vector<uint8_t>(32, 0),
+     "5046adc1dba838867b2bbbfdd0c3423e58b57970b5267a90f57960924a87f1560a6a85eaa642dac835424b5d7c8d637c00408c7a73da672b7f498521420b6dd3def12e42f3e487e9b14095aa8d5cc16a33491f1b50dadcf8811d1480f3fa8627"s},
     {"12345678901234567890123456789012"_v,
      "f0106660c3dda23f16daa9ac5b811b963077f5bc0af89f85804f0de8e424f050f98d66f39442506ff947fd911f18c7a7a5da639a63e8d3b4e233f74143d951c1741c08a06f41c596608f6774259bd9043304adfa5d3eea62760bd9be97634d63"s},
     {"fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e"_unhex,
