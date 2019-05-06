@@ -110,6 +110,10 @@ install:
         pip3 install --user pyyaml
       fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
+  - |
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
+    rustup toolchain install nightly
+    rustup default nightly
 
 before_script:
   - cmake --version
@@ -125,8 +129,7 @@ script:
   - export CC=${_CC}
   - export CXX=${_CXX}
   - export PATH=~/.cargo/bin:$PATH
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y
-  - rustup update
+
   - cargo install --force cbindgen
   - cmake . -Bbuild
   - cmake --build build -- -j2
