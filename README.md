@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/Warchant/sr25519-crust.svg?branch=master)](https://travis-ci.org/Warchant/sr25519-crust)
+[![Gitter](https://badges.gitter.im/sr25519-crust/community.svg)](https://gitter.im/sr25519-crust/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # sr25519-crust
 
