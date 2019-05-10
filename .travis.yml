@@ -36,7 +36,6 @@ matrix:
         homebrew:
           packages:
             - git
-            - rust
 
     - os: osx
       name: "OSX clang"
@@ -51,7 +50,6 @@ matrix:
         homebrew:
           packages:
             - git
-            - rust
 
 
     - os: linux
@@ -69,8 +67,6 @@ matrix:
             - python3
             - python3-pip
             - python3-setuptools
-            - cargo
-            - rustc
       env:
         - _CC=gcc-8
         - _CXX=g++-8
@@ -95,8 +91,6 @@ matrix:
             - python3
             - python3-pip
             - python3-setuptools
-            - cargo
-            - rustc
       env:
         - _CC=clang-8
         - _CXX=clang++-8
@@ -110,10 +104,6 @@ install:
         pip3 install --user pyyaml
       fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
-  - |
-    curl https://sh.rustup.rs -sSf | sh -s -- -y
-    rustup toolchain install nightly
-    rustup default nightly
 
 before_script:
   - cmake --version
@@ -122,14 +112,14 @@ before_script:
   - pip -V
   - pip3 -V
   - gcovr --version || true
-  - cargo --version
-  - rustc --version
 
 script:
   - export CC=${_CC}
   - export CXX=${_CXX}
   - export PATH=~/.cargo/bin:$PATH
-
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - rustup install nightly
+  - rustup default nightly
   - cargo install --force cbindgen
   - cmake . -Bbuild
   - cmake --build build -- -j2
