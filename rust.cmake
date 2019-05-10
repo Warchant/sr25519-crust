@@ -76,8 +76,10 @@ if (NOT BUILD_SHARED_LIBS)
     find_package_handle_standard_args(sr25519
         REQUIRED_VARS pthread
         )
-    set_target_properties(sr25519 PROPERTIES
-        INTERFACE_LINK_LIBRARIES ${pthread}
+    target_link_libraries(sr25519 INTERFACE
+        ${pthread}
+        -Wl,--no-as-needed
+        dl
         )
   else()
     message(WARNING "You're building static lib, it may not link. Come here and fix.")

@@ -116,8 +116,8 @@ before_script:
 script:
   - export CC=${_CC}
   - export CXX=${_CXX}
-  - export PATH=~/.cargo/bin:$PATH
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - export PATH="$HOME/.cargo/bin:$PATH"
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
   - rustup install nightly
   - rustup default nightly
   - cargo install --force cbindgen

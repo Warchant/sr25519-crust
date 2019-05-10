@@ -6,6 +6,8 @@
 #ifndef SR25519CRUST_UTILS_HPP
 #define SR25519CRUST_UTILS_HPP
 
+#include <algorithm>
+#include <cassert>
 #include <iomanip>
 #include <random>
 #include <sstream>
@@ -32,13 +34,15 @@ randomKeypair(size_t initseed = std::random_device()()) {
 inline std::vector<uint8_t> operator"" _unhex(const char *c, size_t s) {
   assert(s % 2 == 0);
 
+  std::string hex{c, c + s};
   std::vector<uint8_t> v;
 
-  int x = 0;
-  std::istringstream stream(std::string{c, c + s});
-  for (const auto &i : v) {
-    stream >> std::hex >> x;
-    v.push_back(x);
+  int len = hex.length();
+  std::string newString;
+  for (int i = 0; i < len; i += 2) {
+    std::string byte = hex.substr(i, 2);
+    char chr = (char)strtol(byte.c_str(), nullptr, 16);
+    v.push_back(chr);
   }
 
   return v;
@@ -50,11 +54,15 @@ inline std::vector<uint8_t> operator"" _v(const char *c, size_t s) {
 
 inline std::string hex(const std::vector<uint8_t> &v) {
   assert(!v.empty());
-  std::stringstream stream;
-  for (const auto &i : v) {
-    stream << std::hex << std::setfill('0') << std::setw(2) << i;
+  static auto alphabet = "0123456789abcdef";
+  std::string out(v.size() * 2, 0);
+
+  for (int i = 0; i < v.size(); i++) {
+    out[i * 2] = alphabet[v[i] >> 4];
+    out[i * 2 + 1] = alphabet[v[i] & 0x0F];
   }
-  return stream.str();
+
+  return out;
 }
 
 #endif // SR25519CRUST_UTILS_HPP
