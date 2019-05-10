@@ -28,3 +28,12 @@ C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com
    sudo make install
    ```
 
+## Docs
+
+Header with comments will be generated in `build/include/sr25519/sr25519.h`.
+
+## Examples
+
+- [Keypair derivation](./test/derive.cpp)
+- [Sign/Verify](./test/ds.cpp)
+- [Keypair from seed](./test/keypair_from_seed.cpp)
