@@ -83,9 +83,7 @@ matrix:
         apt:
           sources:
             - llvm-toolchain-xenial-8
-            - ubuntu-toolchain-r-test
           packages:
-            - g++-8
             - clang-8
             - git
             - python3
@@ -100,9 +98,9 @@ install:
     # install python pip3 deps
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
         pyenv global 3.6
-      elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        pip3 install --user pyyaml
-      fi
+    elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+      pip3 install --user pyyaml
+    fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
 
 before_script:
