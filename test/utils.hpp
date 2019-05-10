@@ -6,8 +6,9 @@
 #ifndef SR25519CRUST_UTILS_HPP
 #define SR25519CRUST_UTILS_HPP
 
-#include <boost/algorithm/hex.hpp>
+#include <iomanip>
 #include <random>
+#include <sstream>
 #include <vector>
 
 extern "C" {
@@ -15,7 +16,6 @@ extern "C" {
 };
 
 using std::string_literals::operator""s;
-namespace b = boost::algorithm;
 
 inline std::vector<uint8_t>
 randomKeypair(size_t initseed = std::random_device()()) {
@@ -31,8 +31,16 @@ randomKeypair(size_t initseed = std::random_device()()) {
 
 inline std::vector<uint8_t> operator"" _unhex(const char *c, size_t s) {
   assert(s % 2 == 0);
-  std::vector<uint8_t> v(s / 2, 0);
-  b::unhex(c, c + s, v.data());
+
+  std::vector<uint8_t> v;
+
+  int x = 0;
+  std::istringstream stream(std::string{c, c + s});
+  for (const auto &i : v) {
+    stream >> std::hex >> x;
+    v.push_back(x);
+  }
+
   return v;
 }
 
@@ -40,11 +48,13 @@ inline std::vector<uint8_t> operator"" _v(const char *c, size_t s) {
   return std::vector<uint8_t>{c, c + s};
 }
 
-inline std::string hex(std::vector<uint8_t> v) {
+inline std::string hex(const std::vector<uint8_t> &v) {
   assert(!v.empty());
-  std::string h(v.size() * 2, 0);
-  b::hex_lower(v.begin(), v.end(), h.begin());
-  return h;
+  std::stringstream stream;
+  for (const auto &i : v) {
+    stream << std::hex << std::setfill('0') << std::setw(2) << i;
+  }
+  return stream.str();
 }
 
 #endif // SR25519CRUST_UTILS_HPP

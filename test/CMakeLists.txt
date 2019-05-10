@@ -4,6 +4,5 @@ addtest(sr25519_test
     keypair_from_seed.cpp
     )
 target_link_libraries(sr25519_test
-    Boost::boost
     sr25519
     )

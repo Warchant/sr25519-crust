@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  dev:
+    image: warchantua/dev-essential
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/app:rw
+    command: bash

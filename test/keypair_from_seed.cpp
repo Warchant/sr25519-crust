@@ -4,7 +4,6 @@
  */
 
 #include "utils.hpp"
-#include <boost/algorithm/hex.hpp>
 #include <gtest/gtest.h>
 #include <string>
 
