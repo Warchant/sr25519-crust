@@ -7,13 +7,12 @@ C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com
 
 ## Build
 
-1. Install rust compiler (nightly), `cargo`, `cbindgen`:
+1. Install rust compiler (nightly), `cargo`:
     ```bash
     curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
     source $HOME/.cargo/env
     rustup install nightly
     rustup default nightly
-    cargo install --force cbindgen
     ```
 2. `mkdir build && cd build`
 3. Options;
