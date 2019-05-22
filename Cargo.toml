@@ -3,6 +3,7 @@ name = "sr25519crust"
 version = "0.1.0"
 authors = ["Bogdan Vaneev <warchantua@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 [lib]
 name = "sr25519crust"
