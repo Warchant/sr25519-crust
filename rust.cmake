@@ -45,19 +45,22 @@ ifd_install(${lib} ${CMAKE_INSTALL_LIBDIR})
 
 
 ### setup tasks
-execute_process(
-    COMMAND cargo build --target-dir ${CMAKE_BINARY_DIR} ${release_option}
+add_custom_target(
+    cargo_build
+    ALL
+    COMMAND cargo build --target-dir ${CMAKE_BINARY_DIR} ${release_option} && cargo install --force cbindgen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-must_have_exe(cbindgen)
-
-execute_process(
+add_custom_target(
+    generate_c_binding
+    ALL
     COMMAND cbindgen -o ${sr25519_h_dir}/sr25519.h
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+add_dependencies(generate_c_binding cargo_build)
 
-add_library(sr25519 UNKNOWN IMPORTED GLOBAL)
+add_library(sr25519 STATIC IMPORTED GLOBAL)
 
 # if we build static lib
 if (NOT BUILD_SHARED_LIBS)
@@ -86,6 +89,8 @@ set_target_properties(sr25519 PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${include_path}
     IMPORTED_LOCATION ${lib}
     )
+add_dependencies(sr25519 generate_c_binding)
+
 file(MAKE_DIRECTORY ${sr25519_h_dir})
 
 
