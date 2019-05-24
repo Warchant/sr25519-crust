@@ -226,7 +226,7 @@ pub mod tests {
 	extern crate schnorrkel;
 
 	use super::*;
-	use hex_literal::{hex, hex_impl};
+	use hex_literal::hex;
 	use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 
 	fn generate_random_seed() -> Vec<u8> {
