@@ -7,7 +7,7 @@ if (CCACHE_FOUND)
 endif (CCACHE_FOUND)
 
 
-option(TESTING  "Enable tests" ON)
+option(TESTING  "Enable tests" OFF)
 
 if (TESTING)
   include("cmake/3rdparty/Hunter/init.cmake")
