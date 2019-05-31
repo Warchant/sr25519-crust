@@ -39,7 +39,7 @@ inline std::vector<uint8_t> operator"" _unhex(const char *c, size_t s) {
 
   int len = hex.length();
   std::string newString;
-  for (int i = 0; i < len; i += 2) {
+  for (auto i = 0u; i < len; i += 2) {
     std::string byte = hex.substr(i, 2);
     char chr = (char)strtol(byte.c_str(), nullptr, 16);
     v.push_back(chr);
@@ -57,7 +57,7 @@ inline std::string hex(const std::vector<uint8_t> &v) {
   static auto alphabet = "0123456789abcdef";
   std::string out(v.size() * 2, 0);
 
-  for (int i = 0; i < v.size(); i++) {
+  for (auto i = 0u; i < v.size(); i++) {
     out[i * 2] = alphabet[v[i] >> 4];
     out[i * 2 + 1] = alphabet[v[i] & 0x0F];
   }
