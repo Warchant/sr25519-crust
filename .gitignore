@@ -13,3 +13,6 @@ Cargo.lock
 **/*.rs.bk
 
 build
+
+# Utility files of Visual Studio Code
+.vscode/

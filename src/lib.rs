@@ -33,7 +33,10 @@ fn create_cc(data: &[u8]) -> ChainCode {
 /// Keypair helper function.
 fn create_from_seed(seed: &[u8]) -> Keypair {
 	match MiniSecretKey::from_bytes(seed) {
-		Ok(mini) => return mini.expand_to_keypair(),
+		Ok(mini) => {
+			let secret = mini.expand_ed25519();
+			return Keypair::from(secret);
+		},
 		Err(_) => panic!("Provided seed is invalid."),
 	}
 }
@@ -95,11 +98,12 @@ pub unsafe extern "C" fn sr25519_derive_keypair_hard(
 ) {
 	let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE);
 	let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
-	let kp = create_from_pair(pair)
+	let secret = create_from_pair(pair)
 		.secret
 		.hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
 		.0
-		.expand_to_keypair();
+		.expand_ed25519();
+	let kp = Keypair::from(secret);
 
 	ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
 }
@@ -208,16 +212,17 @@ pub unsafe extern "C" fn sr25519_verify(
 	message_ptr: *const u8,
 	message_length: usize,
 	public_ptr: *const u8,
-) -> bool {
+) -> u8 {
 	let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
 	let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE);
 	let message = slice::from_raw_parts(message_ptr, message_length as usize);
 	let signature = match Signature::from_bytes(signature) {
 		Ok(signature) => signature,
-		Err(_) => return false,
+		Err(_) => return 0,
 	};
 
-	create_public(public).verify_simple(SIGNING_CTX, message, &signature)
+	let res = create_public(public).verify_simple(SIGNING_CTX, message, &signature);
+	if res.is_ok() { 1 } else { 0 }
 }
 
 #[cfg(test)]
@@ -301,7 +306,7 @@ pub mod tests {
 				message.as_ptr(),
 				message.len(),
 				public.as_ptr(),
-			)
+			) == 1
 		};
 
 		assert!(is_valid);
@@ -338,8 +343,8 @@ pub mod tests {
 		let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
 		let expected = hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
 		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
 		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
 		unsafe { sr25519_derive_keypair_hard(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
 		let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
