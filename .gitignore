@@ -15,4 +15,7 @@ Cargo.lock
 build
 
 # Utility files of Visual Studio Code
-.vscode/
+.vscode
+
+# Utility files of CLion
+.idea/

@@ -1,4 +1,5 @@
 extern crate schnorrkel;
+extern crate libc;
 
 // Copyright 2019 Soramitsu via https://github.com/Warchant/sr25519-crust
 // Copyright 2019 Paritytech via https://github.com/paritytech/schnorrkel-js/
@@ -17,6 +18,7 @@ use schnorrkel::{
 
 use std::ptr;
 use std::slice;
+use std::fmt::Write;
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
@@ -63,6 +65,17 @@ fn create_secret(secret: &[u8]) -> SecretKey {
 		Ok(secret) => return secret,
 		Err(_) => panic!("Provided private key is invalid."),
 	}
+}
+
+unsafe fn allocate_error_string(e: &schnorrkel::SignatureError) -> *const libc::c_char {
+	let mut err_msg = String::new();
+	write!(&mut err_msg, "{}", e);
+	let ptr = libc::malloc(err_msg.len());
+	let out_str = slice::from_raw_parts_mut(ptr as *mut libc::c_char, err_msg.len());
+	for i in 0..(err_msg.len()) {
+		out_str[i] = err_msg.as_bytes()[i] as i8;
+	}
+	out_str.as_ptr() as *const _
 }
 
 /// Size of input SEED for derivation, bytes
@@ -212,17 +225,20 @@ pub unsafe extern "C" fn sr25519_verify(
 	message_ptr: *const u8,
 	message_length: usize,
 	public_ptr: *const u8,
-) -> u8 {
+) -> *const libc::c_char {
 	let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
 	let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE);
 	let message = slice::from_raw_parts(message_ptr, message_length as usize);
 	let signature = match Signature::from_bytes(signature) {
 		Ok(signature) => signature,
-		Err(_) => return 0,
+		Err(e) => return allocate_error_string(&e)
 	};
 
 	let res = create_public(public).verify_simple(SIGNING_CTX, message, &signature);
-	if res.is_ok() { 1 } else { 0 }
+	match res {
+		Ok(()) => libc::PT_NULL as *const _,
+		Err(e) => allocate_error_string(&e)
+	}
 }
 
 #[cfg(test)]
@@ -306,7 +322,7 @@ pub mod tests {
 				message.as_ptr(),
 				message.len(),
 				public.as_ptr(),
-			) == 1
+			) == 0 as *const _
 		};
 
 		assert!(is_valid);
