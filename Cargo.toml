@@ -18,4 +18,4 @@ hex-literal = "0.2.0"
 rand = "0.6.5"
 
 [build-dependencies]
-cbindgen = "0.8.5"
+cbindgen = "0.9.0"
