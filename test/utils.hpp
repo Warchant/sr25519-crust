@@ -39,7 +39,7 @@ inline std::vector<uint8_t> operator"" _unhex(const char *c, size_t s) {
 
   int len = hex.length();
   std::string newString;
-  for (auto i = 0u; i < len; i += 2) {
+  for (auto i = 0; i < len; i += 2) {
     std::string byte = hex.substr(i, 2);
     char chr = (char)strtol(byte.c_str(), nullptr, 16);
     v.push_back(chr);
