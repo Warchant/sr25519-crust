@@ -15,7 +15,7 @@ schnorrkel = { version="0.1.1" }
 
 [dev-dependencies]
 hex-literal = "0.2.0"
-rand = "0.6.5"
+rand = "0.7.0"
 
 [build-dependencies]
 cbindgen = "0.9.0"
