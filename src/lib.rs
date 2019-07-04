@@ -15,14 +15,12 @@ use schnorrkel::{
     derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
     Keypair, MiniSecretKey, PublicKey, SecretKey, Signature,
     context::signing_context,
-    keys::KEYPAIR_LENGTH,
-    vrf::{VRFOutput, VRFProof, VRF_OUTPUT_LENGTH, VRF_PROOF_LENGTH},
-    PUBLIC_KEY_LENGTH};
+    vrf::{VRFOutput, VRFProof},
+};
 
 use std::ptr;
 use std::slice;
 use std::fmt::Write;
-use schnorrkel::points::RistrettoBoth;
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
@@ -39,10 +37,7 @@ fn create_cc(data: &[u8]) -> ChainCode {
 /// Keypair helper function.
 fn create_from_seed(seed: &[u8]) -> Keypair {
     match MiniSecretKey::from_bytes(seed) {
-        Ok(mini) => {
-            let secret = mini.expand_ed25519();
-            return Keypair::from(secret);
-        }
+        Ok(mini) => return mini.expand_to_keypair(),
         Err(_) => panic!("Provided seed is invalid."),
     }
 }
@@ -121,6 +116,7 @@ pub const SR25519_VRF_OUTPUT_LENGTH: usize = 32;
 /// Size of VRF proof, bytes
 pub const SR25519_VRF_PROOF_LENGTH: usize = 64;
 
+
 /// Perform a derivation on a secret
 ///
 /// * keypair_out: pre-allocated output buffer of SR25519_KEYPAIR_SIZE bytes
@@ -136,12 +132,11 @@ pub unsafe extern "C" fn sr25519_derive_keypair_hard(
 ) {
     let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE);
     let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
-    let secret = create_from_pair(pair)
+    let kp = create_from_pair(pair)
         .secret
         .hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
         .0
-        .expand_ed25519();
-    let kp = Keypair::from(secret);
+        .expand_to_keypair();
 
     ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
 }
@@ -250,20 +245,16 @@ pub unsafe extern "C" fn sr25519_verify(
     message_ptr: *const u8,
     message_length: usize,
     public_ptr: *const u8,
-) -> *const libc::c_char {
+) -> bool {
     let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
     let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE);
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let signature = match Signature::from_bytes(signature) {
         Ok(signature) => signature,
-        Err(e) => return allocate_error_string_from("make signature from bytes", &e)
+        Err(_) => return false,
     };
 
-    let res = create_public(public).verify_simple(SIGNING_CTX, message, &signature);
-    match res {
-        Ok(()) => libc::PT_NULL as *const _,
-        Err(e) => allocate_error_string_from("verify_simple", &e)
-    }
+    create_public(public).verify_simple(SIGNING_CTX, message, &signature)
 }
 
 #[repr(C)]
@@ -290,7 +281,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     let message = slice::from_raw_parts(message_ptr, message_length);
     let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_LENGTH);
     let res =
-        keypair.vrf_sign_after_check(
+        keypair.vrf_sign_n_check(
             signing_context(SIGNING_CTX).bytes(message),
             |x| x.as_output_bytes().as_ref().lt(&limit));
     if let Some((io, proof, _)) = res {
@@ -403,32 +394,32 @@ pub mod tests {
         assert_eq!(signature.len(), SIGNATURE_LENGTH);
     }
 
-    #[test]
-    fn can_verify_message() {
-        let seed = generate_random_seed();
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-        unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
-        let private = &keypair[0..SECRET_KEY_LENGTH];
-        let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-        let message = b"this is a message";
-        let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
-        unsafe {
-            sr25519_sign(
-                signature.as_mut_ptr(),
-                public.as_ptr(),
-                private.as_ptr(),
-                message.as_ptr(),
-                message.len(),
-            )
-        };
-        let is_valid = unsafe {
-            sr25519_verify(
-                signature.as_ptr(),
-                message.as_ptr(),
-                message.len(),
-                public.as_ptr(),
-            ) == 0 as *const _
-        };
+	#[test]
+	fn can_verify_message() {
+		let seed = generate_random_seed();
+		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+		let private = &keypair[0..SECRET_KEY_LENGTH];
+		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+		let message = b"this is a message";
+		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+		unsafe {
+			sr25519_sign(
+				signature.as_mut_ptr(),
+				public.as_ptr(),
+				private.as_ptr(),
+				message.as_ptr(),
+				message.len(),
+			)
+		};
+		let is_valid = unsafe {
+			sr25519_verify(
+				signature.as_ptr(),
+				message.as_ptr(),
+				message.len(),
+				public.as_ptr(),
+			) == 1
+		};
 
         assert!(is_valid);
     }

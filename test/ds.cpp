@@ -53,8 +53,8 @@ TEST(sr25519, VerifyExisting) {
       "decef12cf20443e7c7a9d406c237e90bcfcf145860722622f92ebfd5eb4b5b3990b6443934b5cba8f925a0ae75b3a77d35b8490cbb358dd850806e58eaf72904"_unhex;
 
   ASSERT_EQ(pub.size(), SR25519_PUBLIC_SIZE);
-  // ASSERT_EQ(sig.size(), SR25519_SIGNATURE_SIZE);
-  const char* valid = sr25519_verify(sig.data(), msg.data(), msg.size(), pub.data());
+  ASSERT_EQ(sig.size(), SR25519_SIGNATURE_SIZE);
+  bool valid = sr25519_verify(sig.data(), msg.data(), msg.size(), pub.data());
 
-  ASSERT_EQ(valid, nullptr) << valid;
+  ASSERT_TRUE(valid);
 }
