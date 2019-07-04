@@ -22,6 +22,9 @@ use std::ptr;
 use std::slice;
 use std::fmt::Write;
 
+// Absent on OS X
+pub const PT_NULL: u32 = 0;
+
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
 
@@ -287,9 +290,9 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     if let Some((io, proof, _)) = res {
         ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_LENGTH);
         ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_LENGTH), SR25519_VRF_PROOF_LENGTH);
-        return VrfSignResult { is_less: 1, err_msg: libc::PT_NULL as *const _ };
+        return VrfSignResult { is_less: 1, err_msg: PT_NULL as *const _ };
     } else {
-        return VrfSignResult { is_less: 0, err_msg: libc::PT_NULL as *const _ };
+        return VrfSignResult { is_less: 0, err_msg: PT_NULL as *const _ };
     }
 }
 
@@ -331,7 +334,7 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     };
     if in_out.to_output() == vrf_out &&
         decomp_proof == vrf_proof {
-        libc::PT_NULL as *const _
+        PT_NULL as *const _
     } else {
         allocate_error_string("Verification failed")
     }
@@ -485,7 +488,7 @@ pub mod tests {
                                             message.as_ptr(), message.len(),
                                             io.as_output_bytes().as_ptr(),
                                             proof.to_bytes().as_ptr());
-            assert_eq!(errptr, libc::PT_NULL as *const _, "AAA {}", String::from_raw_parts(errptr as *mut u8, 30, 32));
+            assert_eq!(errptr, PT_NULL as *const _, "AAA {}", String::from_raw_parts(errptr as *mut u8, 30, 32));
         }
     }
 }
