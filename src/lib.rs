@@ -418,7 +418,7 @@ pub mod tests {
 				message.as_ptr(),
 				message.len(),
 				public.as_ptr(),
-			) == 1
+			)
 		};
 
         assert!(is_valid);
@@ -474,7 +474,7 @@ pub mod tests {
 
         let keypair = Keypair::from_bytes(&keypair_bytes).expect("Keypair creation error");
         let ctx = signing_context(SIGNING_CTX).bytes(message);
-        let (io, proof, proof_batch) = keypair.vrf_sign(ctx.clone());
+        let (io, proof, _) = keypair.vrf_sign(ctx.clone());
         let (io_, proof_) = keypair.public.vrf_verify(ctx.clone(), &io.to_output(), &proof).expect("Verification error");
         assert_eq!(io_, io);
         let decomp_proof = proof_.shorten_vrf(
