@@ -12,7 +12,6 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 schnorrkel = { version="0.1.1" }
-libc = "0.2.58"
 
 [dev-dependencies]
 hex-literal = "0.2.0"

@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "utils.hpp"
 #include <gtest/gtest.h>
 #include <string>
+#include <array>
+#include "utils.hpp"
 
 extern "C" {
 #include <sr25519/sr25519.h>

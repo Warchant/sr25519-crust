@@ -18,6 +18,7 @@ use schnorrkel::{
 use std::ptr;
 use std::slice;
 use std::fmt::Write;
+use std::os::raw::c_ulong;
 
 // Absent on OS X
 const PT_NULL: u32 = 0;
@@ -108,28 +109,28 @@ fn create_secret(secret: &[u8]) -> SecretKey {
 }
 
 /// Size of input SEED for derivation, bytes
-pub const SR25519_SEED_SIZE: usize = 32;
+pub const SR25519_SEED_SIZE: c_ulong = 32;
 
 /// Size of CHAINCODE, bytes
-pub const SR25519_CHAINCODE_SIZE: usize = 32;
+pub const SR25519_CHAINCODE_SIZE: c_ulong = 32;
 
 /// Size of SR25519 PUBLIC KEY, bytes
-pub const SR25519_PUBLIC_SIZE: usize = 32;
+pub const SR25519_PUBLIC_SIZE: c_ulong = 32;
 
 /// Size of SR25519 PRIVATE (SECRET) KEY, which consists of [32 bytes key | 32 bytes nonce]
-pub const SR25519_SECRET_SIZE: usize = 64;
+pub const SR25519_SECRET_SIZE: c_ulong = 64;
 
 /// Size of SR25519 SIGNATURE, bytes
-pub const SR25519_SIGNATURE_SIZE: usize = 64;
+pub const SR25519_SIGNATURE_SIZE: c_ulong = 64;
 
 /// Size of SR25519 KEYPAIR. [32 bytes key | 32 bytes nonce | 32 bytes public]
-pub const SR25519_KEYPAIR_SIZE: usize = 96;
+pub const SR25519_KEYPAIR_SIZE: c_ulong = 96;
 
 /// Size of VRF output, bytes
-pub const SR25519_VRF_OUTPUT_SIZE: usize = 32;
+pub const SR25519_VRF_OUTPUT_SIZE: c_ulong = 32;
 
 /// Size of VRF proof, bytes
-pub const SR25519_VRF_PROOF_SIZE: usize = 64;
+pub const SR25519_VRF_PROOF_SIZE: c_ulong = 64;
 
 
 /// Perform a derivation on a secret
@@ -145,15 +146,15 @@ pub unsafe extern "C" fn sr25519_derive_keypair_hard(
     pair_ptr: *const u8,
     cc_ptr: *const u8,
 ) {
-    let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE);
-    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
+    let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE as usize);
+    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE as usize);
     let kp = create_from_pair(pair)
         .secret
         .hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
         .0
         .expand_to_keypair();
 
-    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
+    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE as usize);
 }
 
 /// Perform a derivation on a secret
@@ -169,13 +170,13 @@ pub unsafe extern "C" fn sr25519_derive_keypair_soft(
     pair_ptr: *const u8,
     cc_ptr: *const u8,
 ) {
-    let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE);
-    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
+    let pair = slice::from_raw_parts(pair_ptr, SR25519_KEYPAIR_SIZE as usize);
+    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE as usize);
     let kp = create_from_pair(pair)
         .derived_key_simple(create_cc(cc), &[])
         .0;
 
-    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
+    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE as usize);
 }
 
 /// Perform a derivation on a publicKey
@@ -191,12 +192,12 @@ pub unsafe extern "C" fn sr25519_derive_public_soft(
     public_ptr: *const u8,
     cc_ptr: *const u8,
 ) {
-    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
-    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE);
+    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE as usize);
+    let cc = slice::from_raw_parts(cc_ptr, SR25519_CHAINCODE_SIZE as usize);
     let p = create_public(public)
         .derived_key_simple(create_cc(cc), &[])
         .0;
-    ptr::copy(p.to_bytes().as_ptr(), pubkey_out, SR25519_PUBLIC_SIZE);
+    ptr::copy(p.to_bytes().as_ptr(), pubkey_out, SR25519_PUBLIC_SIZE as usize);
 }
 
 /// Generate a key pair.
@@ -207,9 +208,9 @@ pub unsafe extern "C" fn sr25519_derive_public_soft(
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn sr25519_keypair_from_seed(keypair_out: *mut u8, seed_ptr: *const u8) {
-    let seed = slice::from_raw_parts(seed_ptr, SR25519_SEED_SIZE);
+    let seed = slice::from_raw_parts(seed_ptr, SR25519_SEED_SIZE as usize);
     let kp = create_from_seed(seed);
-    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE);
+    ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE as usize);
 }
 
 /// Sign a message
@@ -230,10 +231,10 @@ pub unsafe extern "C" fn sr25519_sign(
     public_ptr: *const u8,
     secret_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: usize,
+    message_length: c_ulong,
 ) {
-    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
-    let secret = slice::from_raw_parts(secret_ptr, SR25519_SECRET_SIZE);
+    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE as usize);
+    let secret = slice::from_raw_parts(secret_ptr, SR25519_SECRET_SIZE as usize);
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
 
     let sig = create_secret(secret).sign_simple(SIGNING_CTX, message, &create_public(public));
@@ -241,7 +242,7 @@ pub unsafe extern "C" fn sr25519_sign(
     ptr::copy(
         sig.to_bytes().as_ptr(),
         signature_out,
-        SR25519_SIGNATURE_SIZE,
+        SR25519_SIGNATURE_SIZE as usize,
     );
 }
 
@@ -258,11 +259,11 @@ pub unsafe extern "C" fn sr25519_sign(
 pub unsafe extern "C" fn sr25519_verify(
     signature_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: usize,
+    message_length: c_ulong,
     public_ptr: *const u8,
 ) -> bool {
-    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE);
-    let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE);
+    let public = slice::from_raw_parts(public_ptr, SR25519_PUBLIC_SIZE as usize);
+    let signature = slice::from_raw_parts(signature_ptr, SR25519_SIGNATURE_SIZE as usize);
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let signature = match Signature::from_bytes(signature) {
         Ok(signature) => signature,
@@ -288,20 +289,20 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     out_and_proof_ptr: *mut u8,
     keypair_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: usize,
+    message_length: c_ulong,
     limit_ptr: *const u8,
 ) -> VrfSignResult {
-    let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE);
+    let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
     let keypair = create_from_pair(keypair_bytes);
-    let message = slice::from_raw_parts(message_ptr, message_length);
-    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE);
+    let message = slice::from_raw_parts(message_ptr, message_length as usize);
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
     let res =
         keypair.vrf_sign_n_check(
             signing_context(SIGNING_CTX).bytes(message),
             |x| x.as_output_bytes().as_ref().lt(&limit));
     if let Some((io, proof, _)) = res {
-        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE);
-        ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE), SR25519_VRF_PROOF_SIZE);
+        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+        ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
         return VrfSignResult { is_less: true, result: Sr25519SignatureResult::Ok };
     } else {
         return VrfSignResult { is_less: false, result: Sr25519SignatureResult::Ok };
@@ -317,20 +318,20 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
 pub unsafe extern "C" fn sr25519_vrf_verify(
     public_key_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: usize,
+    message_length: c_ulong,
     output_ptr: *const u8,
     proof_ptr: *const u8,
 ) -> Sr25519SignatureResult {
-    let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE));
-    let message = slice::from_raw_parts(message_ptr, message_length);
+    let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
+    let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let ctx = signing_context(SIGNING_CTX).bytes(message);
     let vrf_out = match VRFOutput::from_bytes(
-        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE)) {
+        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
         Ok(val) => val,
         Err(err) => return convert_error(&err)
     };
     let vrf_proof = match VRFProof::from_bytes(
-        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE)) {
+        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
         Ok(val) => val,
         Err(err) => return convert_error(&err)
     };
@@ -402,7 +403,7 @@ pub mod tests {
                 public.as_ptr(),
                 private.as_ptr(),
                 message.as_ptr(),
-                message.len(),
+                message.len() as c_ulong,
             )
         };
 
@@ -424,14 +425,14 @@ pub mod tests {
                 public.as_ptr(),
                 private.as_ptr(),
                 message.as_ptr(),
-                message.len(),
+                message.len() as c_ulong,
             )
         };
         let is_valid = unsafe {
             sr25519_verify(
                 signature.as_ptr(),
                 message.as_ptr(),
-                message.len(),
+                message.len() as c_ulong,
                 public.as_ptr(),
             )
         };
@@ -497,7 +498,7 @@ pub mod tests {
         assert_eq!(proof, decomp_proof);
         unsafe {
             let res = sr25519_vrf_verify(public.as_ptr(),
-                                            message.as_ptr(), message.len(),
+                                            message.as_ptr(), message.len() as c_ulong,
                                             io.as_output_bytes().as_ptr(),
                                             proof.to_bytes().as_ptr());
             assert_eq!(res, Sr25519SignatureResult::Ok);
