@@ -15,6 +15,8 @@ env:
 
 cache:
   apt: true
+  pip: true
+  cargo: true
   ccache: true
   directories:
     - "$HOME/.ccache"
@@ -96,9 +98,7 @@ matrix:
 install:
   - |
     # install python pip3 deps
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        pyenv global 3.6
-    elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
       pip3 install --user pyyaml
     fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
@@ -119,6 +119,6 @@ script:
   - rustup install nightly
   - rustup default nightly
   - cargo install --force cbindgen
-  - cmake . -Bbuild
+  - cmake . -Bbuild -DTESTING=ON
   - cmake --build build -- -j2
   - cmake --build build --target test
