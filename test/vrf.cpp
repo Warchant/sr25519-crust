@@ -36,6 +36,8 @@ TEST(VrfTest, Verify) {
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
       out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE);
   ASSERT_EQ(res3, Sr25519SignatureResult::EquationFalse);
+
+
 }
 
 TEST(VrfTest, ResultNotLess) {

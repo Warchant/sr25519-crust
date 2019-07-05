@@ -1,3 +1,7 @@
+// for enum variants
+#![allow(unused_variables)]
+#![allow(non_snake_case)]
+
 extern crate schnorrkel;
 
 // Copyright 2019 Soramitsu via https://github.com/Warchant/sr25519-crust
@@ -17,11 +21,7 @@ use schnorrkel::{
 
 use std::ptr;
 use std::slice;
-use std::fmt::Write;
 use std::os::raw::c_ulong;
-
-// Absent on OS X
-const PT_NULL: u32 = 0;
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -369,7 +369,7 @@ pub mod tests {
     #[test]
     fn can_create_keypair() {
         let seed = generate_random_seed();
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 
         assert_eq!(keypair.len(), KEYPAIR_LENGTH);
@@ -380,7 +380,7 @@ pub mod tests {
     fn creates_pair_from_known() {
         let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
         let expected = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
         let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
@@ -390,13 +390,13 @@ pub mod tests {
     #[test]
     fn can_sign_message() {
         let seed = generate_random_seed();
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
         let private = &keypair[0..SECRET_KEY_LENGTH];
         let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
         let message = b"this is a message";
 
-        let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+        let mut signature = [0u8; SR25519_SIGNATURE_SIZE as usize];
         unsafe {
             sr25519_sign(
                 signature.as_mut_ptr(),
@@ -413,12 +413,12 @@ pub mod tests {
     #[test]
     fn can_verify_message() {
         let seed = generate_random_seed();
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
         let private = &keypair[0..SECRET_KEY_LENGTH];
         let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
         let message = b"this is a message";
-        let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+        let mut signature = [0u8; SR25519_SIGNATURE_SIZE as usize];
         unsafe {
             sr25519_sign(
                 signature.as_mut_ptr(),
@@ -445,8 +445,8 @@ pub mod tests {
         let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
         let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
         let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-        let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
+        let mut derived = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
         unsafe { sr25519_derive_keypair_soft(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
         let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
@@ -459,7 +459,7 @@ pub mod tests {
         let cc = hex!("0c666f6f00000000000000000000000000000000000000000000000000000000"); // foo
         let public = hex!("46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a");
         let expected = hex!("40b9675df90efa6069ff623b0fdfcf706cd47ca7452a5056c7ad58194d23440a");
-        let mut derived = [0u8; SR25519_PUBLIC_SIZE];
+        let mut derived = [0u8; SR25519_PUBLIC_SIZE as usize];
         unsafe { sr25519_derive_public_soft(derived.as_mut_ptr(), public.as_ptr(), cc.as_ptr()) };
 
         assert_eq!(derived, expected);
@@ -470,9 +470,9 @@ pub mod tests {
         let cc = hex!("14416c6963650000000000000000000000000000000000000000000000000000"); // Alice
         let seed = hex!("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e");
         let expected = hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
-        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
-        let mut derived = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut derived = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_derive_keypair_hard(derived.as_mut_ptr(), keypair.as_ptr(), cc.as_ptr()) };
         let public = &derived[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
 
@@ -482,7 +482,7 @@ pub mod tests {
     #[test]
     fn vrf_verify() {
         let seed = generate_random_seed();
-        let mut keypair_bytes = [0u8; SR25519_KEYPAIR_SIZE];
+        let mut keypair_bytes = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair_bytes.as_mut_ptr(), seed.as_ptr()) };
         let private = &keypair_bytes[0..SECRET_KEY_LENGTH];
         let public = &keypair_bytes[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
