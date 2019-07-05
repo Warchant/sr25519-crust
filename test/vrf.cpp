@@ -50,9 +50,6 @@ TEST(VrfTest, ResultNotLess) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  if(res1.result != Sr25519SignatureResult::Ok) {
-    ADD_FAILURE();
-  }
   ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
   ASSERT_FALSE(res1.is_less);
 }
