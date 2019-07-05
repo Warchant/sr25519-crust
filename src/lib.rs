@@ -1,5 +1,4 @@
 extern crate schnorrkel;
-extern crate libc;
 
 // Copyright 2019 Soramitsu via https://github.com/Warchant/sr25519-crust
 // Copyright 2019 Paritytech via https://github.com/paritytech/schnorrkel-js/
@@ -14,14 +13,14 @@ extern crate libc;
 use schnorrkel::{
     derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
     Keypair, MiniSecretKey, PublicKey, SecretKey, Signature,
-    context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError, SignatureResult};
+    context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError};
 
 use std::ptr;
 use std::slice;
 use std::fmt::Write;
 
 // Absent on OS X
-pub const PT_NULL: u32 = 0;
+const PT_NULL: u32 = 0;
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -127,10 +126,10 @@ pub const SR25519_SIGNATURE_SIZE: usize = 64;
 pub const SR25519_KEYPAIR_SIZE: usize = 96;
 
 /// Size of VRF output, bytes
-pub const SR25519_VRF_OUTPUT_LENGTH: usize = 32;
+pub const SR25519_VRF_OUTPUT_SIZE: usize = 32;
 
 /// Size of VRF proof, bytes
-pub const SR25519_VRF_PROOF_LENGTH: usize = 64;
+pub const SR25519_VRF_PROOF_SIZE: usize = 64;
 
 
 /// Perform a derivation on a secret
@@ -276,7 +275,7 @@ pub unsafe extern "C" fn sr25519_verify(
 #[repr(C)]
 pub struct VrfSignResult {
     pub result: Sr25519SignatureResult,
-    pub is_less: u8,
+    pub is_less: bool,
 }
 
 /// Sign the provided message using a Verifiable Random Function and
@@ -289,23 +288,23 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     out_and_proof_ptr: *mut u8,
     keypair_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: libc::size_t,
+    message_length: usize,
     limit_ptr: *const u8,
 ) -> VrfSignResult {
     let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE);
     let keypair = create_from_pair(keypair_bytes);
     let message = slice::from_raw_parts(message_ptr, message_length);
-    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_LENGTH);
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE);
     let res =
         keypair.vrf_sign_n_check(
             signing_context(SIGNING_CTX).bytes(message),
             |x| x.as_output_bytes().as_ref().lt(&limit));
     if let Some((io, proof, _)) = res {
-        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_LENGTH);
-        ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_LENGTH), SR25519_VRF_PROOF_LENGTH);
-        return VrfSignResult { is_less: 1, result: Sr25519SignatureResult::Ok };
+        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE);
+        ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE), SR25519_VRF_PROOF_SIZE);
+        return VrfSignResult { is_less: true, result: Sr25519SignatureResult::Ok };
     } else {
-        return VrfSignResult { is_less: 0, result: Sr25519SignatureResult::Ok };
+        return VrfSignResult { is_less: false, result: Sr25519SignatureResult::Ok };
     }
 }
 
@@ -318,7 +317,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
 pub unsafe extern "C" fn sr25519_vrf_verify(
     public_key_ptr: *const u8,
     message_ptr: *const u8,
-    message_length: libc::size_t,
+    message_length: usize,
     output_ptr: *const u8,
     proof_ptr: *const u8,
 ) -> Sr25519SignatureResult {
@@ -326,12 +325,12 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     let message = slice::from_raw_parts(message_ptr, message_length);
     let ctx = signing_context(SIGNING_CTX).bytes(message);
     let vrf_out = match VRFOutput::from_bytes(
-        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_LENGTH)) {
+        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE)) {
         Ok(val) => val,
         Err(err) => return convert_error(&err)
     };
     let vrf_proof = match VRFProof::from_bytes(
-        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_LENGTH)) {
+        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE)) {
         Ok(val) => val,
         Err(err) => return convert_error(&err)
     };
