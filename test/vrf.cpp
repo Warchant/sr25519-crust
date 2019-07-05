@@ -22,13 +22,19 @@ TEST(VrfTest, Verify) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  ASSERT_EQ(res1.err_msg, nullptr) << res1.err_msg;
+  ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
   ASSERT_TRUE(res1.is_less);
 
   auto res2 = sr25519_vrf_verify(
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
       out_and_proof.data() + SR25519_VRF_OUTPUT_LENGTH);
-  ASSERT_EQ(res2, nullptr) << res2;
+  ASSERT_EQ(res2, Sr25519SignatureResult::Ok);
+
+  out_and_proof[5] += 3;
+  auto res3 = sr25519_vrf_verify(
+      keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
+      out_and_proof.data() + SR25519_VRF_OUTPUT_LENGTH);
+  ASSERT_EQ(res3, Sr25519SignatureResult::EquationFalse);
 }
 
 TEST(VrfTest, ResultNotLess) {
@@ -43,6 +49,6 @@ TEST(VrfTest, ResultNotLess) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  ASSERT_EQ(res1.err_msg, nullptr) << res1.err_msg;
+  ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
   ASSERT_FALSE(res1.is_less);
 }

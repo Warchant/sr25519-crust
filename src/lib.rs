@@ -14,9 +14,7 @@ extern crate libc;
 use schnorrkel::{
     derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
     Keypair, MiniSecretKey, PublicKey, SecretKey, Signature,
-    context::signing_context,
-    vrf::{VRFOutput, VRFProof},
-};
+    context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError, SignatureResult};
 
 use std::ptr;
 use std::slice;
@@ -24,6 +22,46 @@ use std::fmt::Write;
 
 // Absent on OS X
 pub const PT_NULL: u32 = 0;
+
+// cbindgen has an issue with macros, so define it outside,
+// otherwise it would've been possible to avoid duplication of macro variant list
+#[repr(C)]
+pub enum Sr25519SignatureResult {
+    Ok,
+    EquationFalse,
+    PointDecompressionError,
+    ScalarFormatError,
+    BytesLengthError,
+    NotMarkedSchnorrkel,
+    MuSigAbsent,
+    MuSigInconsistent
+}
+
+/// defines a function convert_error which converts from schnorrkel::SignatureError
+/// to Sr25519SignatureResult (which is exported to C header)
+macro_rules! make_error_converter_func {
+    ($( $error:ident ),*) => {
+
+    fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
+        match err {
+            $(
+            $error => Sr25519SignatureResult::$error,
+            )*
+        }
+    }
+    }
+}
+
+// identifiers duplicate SignatureError variants
+make_error_converter_func!(
+    EquationFalse,
+    PointDecompressionError,
+    ScalarFormatError,
+    BytesLengthError,
+    NotMarkedSchnorrkel,
+    MuSigAbsent,
+    MuSigInconsistent
+);
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
@@ -67,32 +105,6 @@ fn create_secret(secret: &[u8]) -> SecretKey {
         Ok(secret) => return secret,
         Err(_) => panic!("Provided private key is invalid."),
     }
-}
-
-/**
- * Allocate a string in memory with prefix \param prefix and suffix, which is the error message of \param e
- */
-unsafe fn allocate_error_string_from(prefix: &str, e: &schnorrkel::SignatureError) -> *const libc::c_char {
-    let mut err_msg = String::new();
-    write!(&mut err_msg, "{}: {}", prefix, e);
-    let ptr = libc::malloc(err_msg.len());
-    let out_str = slice::from_raw_parts_mut(ptr as *mut libc::c_char, err_msg.len());
-    for i in 0..(err_msg.len()) {
-        out_str[i] = err_msg.as_bytes()[i] as i8;
-    }
-    out_str.as_ptr() as *const _
-}
-
-/**
- * Allocate a string in memory with content \param s
- */
-unsafe fn allocate_error_string(s: &str) -> *const libc::c_char {
-    let ptr = libc::malloc(s.len());
-    let out_str = slice::from_raw_parts_mut(ptr as *mut libc::c_char, s.len());
-    for i in 0..(s.len()) {
-        out_str[i] = s.as_bytes()[i] as i8;
-    }
-    out_str.as_ptr() as *const _
 }
 
 /// Size of input SEED for derivation, bytes
@@ -262,7 +274,7 @@ pub unsafe extern "C" fn sr25519_verify(
 
 #[repr(C)]
 pub struct VrfSignResult {
-    pub err_msg: *const libc::c_char,
+    pub result: Sr25519SignatureResult,
     pub is_less: u8,
 }
 
@@ -290,9 +302,9 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     if let Some((io, proof, _)) = res {
         ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_LENGTH);
         ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_LENGTH), SR25519_VRF_PROOF_LENGTH);
-        return VrfSignResult { is_less: 1, err_msg: PT_NULL as *const _ };
+        return VrfSignResult { is_less: 1, result: Sr25519SignatureResult::Ok };
     } else {
-        return VrfSignResult { is_less: 0, err_msg: PT_NULL as *const _ };
+        return VrfSignResult { is_less: 0, result: Sr25519SignatureResult::Ok };
     }
 }
 
@@ -308,35 +320,35 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     message_length: libc::size_t,
     output_ptr: *const u8,
     proof_ptr: *const u8,
-) -> *const libc::c_char {
+) -> Sr25519SignatureResult {
     let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE));
     let message = slice::from_raw_parts(message_ptr, message_length);
     let ctx = signing_context(SIGNING_CTX).bytes(message);
     let vrf_out = match VRFOutput::from_bytes(
         slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_LENGTH)) {
         Ok(val) => val,
-        Err(err) => return allocate_error_string_from("vrf out from bytes", &err)
+        Err(err) => return convert_error(&err)
     };
     let vrf_proof = match VRFProof::from_bytes(
         slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_LENGTH)) {
         Ok(val) => val,
-        Err(err) => return allocate_error_string_from("vrf proof from bytes", &err)
+        Err(err) => return convert_error(&err)
     };
     let (in_out, proof) =
         match public_key.vrf_verify(ctx.clone(), &vrf_out, &vrf_proof) {
             Ok(val) => val,
-            Err(err) => return allocate_error_string_from("vrf_verify", &err)
+            Err(err) => return convert_error(&err)
         };
     let decomp_proof = match
         proof.shorten_vrf(&public_key, ctx.clone(), &in_out.to_output()) {
         Ok(val) => val,
-        Err(e) => return allocate_error_string_from("shorten_vrf", &e)
+        Err(e) => return convert_error(&e)
     };
     if in_out.to_output() == vrf_out &&
         decomp_proof == vrf_proof {
-        PT_NULL as *const _
+        Sr25519SignatureResult::Ok
     } else {
-        allocate_error_string("Verification failed")
+        convert_error(&SignatureError::EquationFalse)
     }
 }
 
@@ -397,32 +409,32 @@ pub mod tests {
         assert_eq!(signature.len(), SIGNATURE_LENGTH);
     }
 
-	#[test]
-	fn can_verify_message() {
-		let seed = generate_random_seed();
-		let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
-		unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
-		let private = &keypair[0..SECRET_KEY_LENGTH];
-		let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
-		let message = b"this is a message";
-		let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
-		unsafe {
-			sr25519_sign(
-				signature.as_mut_ptr(),
-				public.as_ptr(),
-				private.as_ptr(),
-				message.as_ptr(),
-				message.len(),
-			)
-		};
-		let is_valid = unsafe {
-			sr25519_verify(
-				signature.as_ptr(),
-				message.as_ptr(),
-				message.len(),
-				public.as_ptr(),
-			)
-		};
+    #[test]
+    fn can_verify_message() {
+        let seed = generate_random_seed();
+        let mut keypair = [0u8; SR25519_KEYPAIR_SIZE];
+        unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
+        let private = &keypair[0..SECRET_KEY_LENGTH];
+        let public = &keypair[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+        let message = b"this is a message";
+        let mut signature = [0u8; SR25519_SIGNATURE_SIZE];
+        unsafe {
+            sr25519_sign(
+                signature.as_mut_ptr(),
+                public.as_ptr(),
+                private.as_ptr(),
+                message.as_ptr(),
+                message.len(),
+            )
+        };
+        let is_valid = unsafe {
+            sr25519_verify(
+                signature.as_ptr(),
+                message.as_ptr(),
+                message.len(),
+                public.as_ptr(),
+            )
+        };
 
         assert!(is_valid);
     }
@@ -484,11 +496,11 @@ pub mod tests {
             &keypair.public, ctx.clone(), &io.to_output()).expect("Shorten VRF");
         assert_eq!(proof, decomp_proof);
         unsafe {
-            let errptr = sr25519_vrf_verify(public.as_ptr(),
+            let res = sr25519_vrf_verify(public.as_ptr(),
                                             message.as_ptr(), message.len(),
                                             io.as_output_bytes().as_ptr(),
                                             proof.to_bytes().as_ptr());
-            assert_eq!(errptr, PT_NULL as *const _, "AAA {}", String::from_raw_parts(errptr as *mut u8, 30, 32));
+            assert_eq!(res, Sr25519SignatureResult::Ok);
         }
     }
 }
