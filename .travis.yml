@@ -116,9 +116,7 @@ script:
   - export CXX=${_CXX}
   - export PATH="$HOME/.cargo/bin:$PATH"
   - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
-  - rustup install nightly
   - rustup default nightly
-  - cargo install --force cbindgen
   - cmake . -Bbuild -DTESTING=ON
   - cmake --build build -- -j2
   - cmake --build build --target test
