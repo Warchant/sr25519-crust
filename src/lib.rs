@@ -35,7 +35,7 @@ pub enum Sr25519SignatureResult {
     BytesLengthError,
     NotMarkedSchnorrkel,
     MuSigAbsent,
-    MuSigInconsistent
+    MuSigInconsistent,
 }
 
 /// defines a function convert_error which converts from schnorrkel::SignatureError
@@ -281,7 +281,10 @@ pub struct VrfSignResult {
 
 /// Sign the provided message using a Verifiable Random Function and
 /// if the result is less than \param limit provide the proof
-/// @param limit must be 32 bytes long
+/// @param out_and_proof_ptr pointer to output array, where the VRF out and proof will be written
+/// @param keypair_ptr byte representation of the keypair that will be used during signing
+/// @param message_ptr byte array to be signed
+/// @param limit_ptr byte array, must be 32 bytes long
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
@@ -310,6 +313,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
 }
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof
+/// @param public_key_ptr byte representation of the public key that was used to sign the message
 /// @param message_ptr the orignal signed message
 /// @param output_ptr the signature
 /// @param proof_ptr the proof of the signature
@@ -498,9 +502,9 @@ pub mod tests {
         assert_eq!(proof, decomp_proof);
         unsafe {
             let res = sr25519_vrf_verify(public.as_ptr(),
-                                            message.as_ptr(), message.len() as c_ulong,
-                                            io.as_output_bytes().as_ptr(),
-                                            proof.to_bytes().as_ptr());
+                                         message.as_ptr(), message.len() as c_ulong,
+                                         io.as_output_bytes().as_ptr(),
+                                         proof.to_bytes().as_ptr());
             assert_eq!(res, Sr25519SignatureResult::Ok);
         }
     }
