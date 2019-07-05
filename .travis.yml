@@ -1,30 +1,29 @@
 sudo: true
-
 language: cpp
-
-git:
-  depth: 1
 
 branches:
   except:
-    - /^feature.*/
-
+    - "/^feature.*/"
 env:
   global:
     - CTEST_OUTPUT_ON_FAILURE=1
-
+    # GITHUB_HUNTER_TOKEN
+    - secure: Cpv0knP07nPGhmk5qKFHjcS2pgml0ZJ1iRqPi09U2Vid44Lm58qu5UrOzUAhiUXk05pIQwCNU3bQRRFn7RmF/fizkFMXFTHtJpceaTFWEzmoupcEmv2pV1J5VfaCT3WhPvyMqsVgtgHZ8DTc4n9sfPmRSBITJcSjFyIqTlf/x1E4g3dP+/tDEkp3lT5F8/jy3CcZOWMZaFzp6Ci9x+PoZMOY6ySRaPl5ttYXWFN5oLSSdcYfbepMVYYxdHbckdKRILK578e/fiJABL6mWhBY2nde6AImoYqQwWSpgLNotQ4LpoYpLLCpS5BzFf10INwger8LLAFwE/Ktk4CV8ccmbBXWkSOp1+7i06JbX9fBNAwcsBPuay2OePKaoXoE7Mh+w50HYJzyNZEVAEDmf7/Nxhp5E6BR0ZfbHSX2HxtTcSCUjBgt5UKK5NboPr/Swl5fyim4clLHBb+DGQCUrdKPW2ot2ysktNwWYUlb68OXSoYxeJR4SjmmSru0M7TgYlB/bjgGz6wh+GmpoPkjsyB8v++eMQm5ctmE42PtXMfyZR+0zOpuHdBxX9V1QIgrspK4Jj0jwx5PCPmJmbNkBpKQRO/BAtiqaFeWPYosNe2mZxKe9KsGdfb+qVAZ/2kofQILswA78YQCfGT4B0h8HuoLUiE0F4bav/PYUtJdX+HoYIA=
+    # GITHUB_HUNTER_USERNAME
+    - secure: Q20D/PlXXwUFpSQPcVqwWizAmQ0QCSvpmvKAwTGHXNr9VT9UueHyBoKlEa6N1kr67LraGFBkhpg4Dj6yZXSL5qbi1FkrQEQ/+Ixoc65Lb/u0MLhpRq8EKJGzPPw88aiIyhvhNINMt7sqM8NAkCZ7R/dO6biwKaoMsuVQUdbGdSNNobc1awNVPEHLbYy2axvxnvDQxQvZh5ZdsZjgvWjOfEhfSqFWrnrX2G4htFgzI1TgMqtHkX8PCdQViwW6i7w9QZwyb5XHwKrt3g7ZBilXKjmhc1DkL3tyOsWaTrzIkVG8Im4pRfV25t8Dc9BKpuRvey4oOqjsWeP0jStqWABeaDB+O2mhHxyAroiV4QINbcqqQaSSzN26WMbA5zzcTRyAsgZzkXUHR2johggQlH4G/NUanJb0bLbQXNYQpudZTT4SYbwWIv8L9MbsfjqxHCnCp5Vs7CYAw1b0+h+7GfbMeCOo65Lk70Uz2zyO1oP4yF3rUZ58SmbJJMJ4JCHoJtci/KCnOVy0la2lLNDFHqqnuoZ+WVBLg0Bs1x2pzUq6IQzU0ZsvjVXrDuZhzeSpFGE4FqMpT00WcNIX2lUX4vJDGWrXjufy0qVA57gyFzYpkddo7K6unHDCsZRJBZnrchzpnTGJXnPF3+x0gm7KGnwsVw/KHW+ny6x4CgXkj4xM7CQ=
 cache:
   apt: true
+  pip: true
+  cargo: true
   ccache: true
   directories:
     - "$HOME/.ccache"
     - "$HOME/.cargo"
     - "$HOME/Library/Caches/Homebrew"
-
 matrix:
   include:
     - os: osx
-      name: "OSX gcc"
+      name: OSX gcc
       osx_image: xcode10.1
       compiler: gcc
       before_cache:
@@ -36,9 +35,8 @@ matrix:
         homebrew:
           packages:
             - git
-
     - os: osx
-      name: "OSX clang"
+      name: OSX clang
       osx_image: xcode10.1
       compiler: clang
       before_cache:
@@ -50,10 +48,8 @@ matrix:
         homebrew:
           packages:
             - git
-
-
     - os: linux
-      name: "Linux gcc8"
+      name: Linux gcc8
       dist: xenial
       compiler: gcc
       addons:
@@ -70,11 +66,8 @@ matrix:
       env:
         - _CC=gcc-8
         - _CXX=g++-8
-
-
-
     - os: linux
-      name: "Linux clang-8"
+      name: Linux clang-8
       dist: xenial
       compiler: clang
       before_cache:
@@ -92,17 +85,13 @@ matrix:
       env:
         - _CC=clang-8
         - _CXX=clang++-8
-
 install:
   - |
     # install python pip3 deps
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        pyenv global 3.6
-    elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
       pip3 install --user pyyaml
     fi
     pip3 install --user --upgrade requests gitpython cmake gcovr
-
 before_script:
   - cmake --version
   - python -V
@@ -110,15 +99,12 @@ before_script:
   - pip -V
   - pip3 -V
   - gcovr --version || true
-
 script:
   - export CC=${_CC}
   - export CXX=${_CXX}
   - export PATH="$HOME/.cargo/bin:$PATH"
   - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
-  - rustup install nightly
   - rustup default nightly
-  - cargo install --force cbindgen
-  - cmake . -Bbuild
+  - cmake . -Bbuild -DTESTING=ON
   - cmake --build build -- -j2
   - cmake --build build --target test
