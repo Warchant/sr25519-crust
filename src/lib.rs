@@ -26,6 +26,7 @@ pub const PT_NULL: u32 = 0;
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
 #[repr(C)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Sr25519SignatureResult {
     Ok,
     EquationFalse,
