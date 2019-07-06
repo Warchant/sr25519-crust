@@ -38,31 +38,20 @@ pub enum Sr25519SignatureResult {
     MuSigInconsistent,
 }
 
-/// defines a function convert_error which converts from schnorrkel::SignatureError
+/// converts from schnorrkel::SignatureError
 /// to Sr25519SignatureResult (which is exported to C header)
-macro_rules! make_error_converter_func {
-    ($( $error:ident ),*) => {
-
-    fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
-        match err {
-            $(
-            $error => Sr25519SignatureResult::$error,
-            )*
-        }
-    }
+fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
+    match err {
+        SignatureError::EquationFalse => Sr25519SignatureResult::EquationFalse,
+        SignatureError::PointDecompressionError => Sr25519SignatureResult::PointDecompressionError,
+        SignatureError::ScalarFormatError => Sr25519SignatureResult::ScalarFormatError,
+        SignatureError::BytesLengthError {name: _, description: _, length: _}
+            => Sr25519SignatureResult::BytesLengthError,
+        SignatureError::MuSigAbsent {musig_stage: _} => Sr25519SignatureResult::MuSigAbsent,
+        SignatureError::MuSigInconsistent {musig_stage: _, duplicate: _}
+            => Sr25519SignatureResult::MuSigInconsistent,
     }
 }
-
-// identifiers duplicate SignatureError variants
-make_error_converter_func!(
-    EquationFalse,
-    PointDecompressionError,
-    ScalarFormatError,
-    BytesLengthError,
-    NotMarkedSchnorrkel,
-    MuSigAbsent,
-    MuSigInconsistent
-);
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
