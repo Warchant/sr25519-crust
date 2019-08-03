@@ -16,7 +16,7 @@ extern crate schnorrkel;
 
 use schnorrkel::{
     derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
-    Keypair, MiniSecretKey, PublicKey, SecretKey, Signature,
+    Keypair, MiniSecretKey, PublicKey, SecretKey, Signature, ExpansionMode,
     context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError};
 
 use std::ptr;
@@ -50,6 +50,7 @@ fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
         SignatureError::MuSigAbsent {musig_stage: _} => Sr25519SignatureResult::MuSigAbsent,
         SignatureError::MuSigInconsistent {musig_stage: _, duplicate: _}
             => Sr25519SignatureResult::MuSigInconsistent,
+        SignatureError::NotMarkedSchnorrkel => Sr25519SignatureResult::NotMarkedSchnorrkel,
     }
 }
 
@@ -68,7 +69,7 @@ fn create_cc(data: &[u8]) -> ChainCode {
 /// Keypair helper function.
 fn create_from_seed(seed: &[u8]) -> Keypair {
     match MiniSecretKey::from_bytes(seed) {
-        Ok(mini) => return mini.expand_to_keypair(),
+        Ok(mini) => return mini.expand_to_keypair(ExpansionMode::Ed25519),
         Err(_) => panic!("Provided seed is invalid."),
     }
 }
@@ -141,7 +142,7 @@ pub unsafe extern "C" fn sr25519_derive_keypair_hard(
         .secret
         .hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
         .0
-        .expand_to_keypair();
+        .expand_to_keypair(ExpansionMode::Ed25519);
 
     ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE as usize);
 }
@@ -259,7 +260,10 @@ pub unsafe extern "C" fn sr25519_verify(
         Err(_) => return false,
     };
 
-    create_public(public).verify_simple(SIGNING_CTX, message, &signature)
+    match create_public(public).verify_simple(SIGNING_CTX, message, &signature) {
+        Ok(_) => true,
+        Err(_) => false
+    }
 }
 
 #[repr(C)]
@@ -289,7 +293,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
     let res =
-        keypair.vrf_sign_n_check(
+        keypair.vrf_sign_after_check(
             signing_context(SIGNING_CTX).bytes(message),
             |x| x.as_output_bytes().as_ref().lt(&limit));
     if let Some((io, proof, _)) = res {
