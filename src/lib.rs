@@ -14,11 +14,14 @@ extern crate schnorrkel;
 // which was adpated from the initial https://github.com/paritytech/schnorrkel-js/
 // forked at commit eff430ddc3090f56317c80654208b8298ef7ab3f
 
-use schnorrkel::{derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH}, Keypair, MiniSecretKey, PublicKey, SecretKey, Signature, context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError, ExpansionMode};
-
+use std::os::raw::c_ulong;
 use std::ptr;
 use std::slice;
-use std::os::raw::c_ulong;
+
+use schnorrkel::{
+    context::signing_context,
+    derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, Keypair, MiniSecretKey, PublicKey, SecretKey,
+    Signature, SignatureError, vrf::{VRFOutput, VRFProof}, ExpansionMode};
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -42,11 +45,11 @@ fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
         SignatureError::EquationFalse => Sr25519SignatureResult::EquationFalse,
         SignatureError::PointDecompressionError => Sr25519SignatureResult::PointDecompressionError,
         SignatureError::ScalarFormatError => Sr25519SignatureResult::ScalarFormatError,
-        SignatureError::BytesLengthError {name: _, description: _, length: _}
-            => Sr25519SignatureResult::BytesLengthError,
-        SignatureError::MuSigAbsent {musig_stage: _} => Sr25519SignatureResult::MuSigAbsent,
-        SignatureError::MuSigInconsistent {musig_stage: _, duplicate: _}
-            => Sr25519SignatureResult::MuSigInconsistent,
+        SignatureError::BytesLengthError { name: _, description: _, length: _ }
+        => Sr25519SignatureResult::BytesLengthError,
+        SignatureError::MuSigAbsent { musig_stage: _ } => Sr25519SignatureResult::MuSigAbsent,
+        SignatureError::MuSigInconsistent { musig_stage: _, duplicate: _ }
+        => Sr25519SignatureResult::MuSigInconsistent,
         SignatureError::NotMarkedSchnorrkel => Sr25519SignatureResult::NotMarkedSchnorrkel
     }
 }
@@ -349,9 +352,10 @@ pub mod tests {
     extern crate rand;
     extern crate schnorrkel;
 
-    use super::*;
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
+
+    use super::*;
 
     fn generate_random_seed() -> Vec<u8> {
         (0..32).map(|_| rand::random::<u8>()).collect()
