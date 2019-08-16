@@ -47,10 +47,12 @@ TEST(sr25519, SignAndVerifyInvalid) {
 
 TEST(sr25519, VerifyExisting) {
   auto pub =
-      "741c08a06f41c596608f6774259bd9043304adfa5d3eea62760bd9be97634d63"_unhex;
+      "46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"_unhex;
+  auto secret = "05d65584630d16cd4af6d0bec10f34bb504a5dcb62dba2122d49f5a663763d0a"_unhex;
+
   auto msg = "this is a message"_v;
   auto sig =
-      "decef12cf20443e7c7a9d406c237e90bcfcf145860722622f92ebfd5eb4b5b3990b6443934b5cba8f925a0ae75b3a77d35b8490cbb358dd850806e58eaf72904"_unhex;
+      "4e172314444b8f820bb54c22e95076f220ed25373e5c178234aa6c211d29271244b947e3ff3418ff6b45fd1df1140c8cbff69fc58ee6dc96df70936a2bb74b82"_unhex;
 
   ASSERT_EQ(pub.size(), SR25519_PUBLIC_SIZE);
   ASSERT_EQ(sig.size(), SR25519_SIGNATURE_SIZE);

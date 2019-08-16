@@ -41,8 +41,7 @@ TEST(VrfTest, Verify) {
 }
 
 TEST(VrfTest, ResultNotLess) {
-  auto keypair =
-      "e07a5da9575743a1993a9f2b9e39991c8d0c2ee4137347e450a39561f419fa7e84912092ffd5746b98a628c57eeafcfa60eb7e5c07438e00b3d0d528f42666813223ce3b7e32de1f876d5cbf44619dd5d1fa91d8c87b63af4a068f4fee24ad3a"_unhex;
+  auto keypair = "915bb406968655c3412df5773c3de3dee9f6da84668b5de8d2f34d0304d20b0bac5ea3a293dfd93859ee64a5b825937753864c19be857f045758dcae10259ba1049b21bb9cb88471b9dadb50b925135cfb291a463043635b58599a2d01b1fd18"_unhex;
   std::array<uint8_t, SR25519_VRF_OUTPUT_SIZE + SR25519_VRF_PROOF_SIZE>
       out_and_proof;
 
