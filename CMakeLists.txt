@@ -6,7 +6,6 @@ if (CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
-
 option(TESTING  "Enable tests" OFF)
 
 if (TESTING)

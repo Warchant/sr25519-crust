@@ -11,13 +11,13 @@ extern crate schnorrkel;
 // of the Apache-2.0 license. See the LICENSE file for details.
 
 // Originally developed (as a fork) in https://github.com/polkadot-js/schnorrkel-js/
-// which was adpated from the initial https://github.com/paritytech/schnorrkel-js/
+// which was adopted from the initial https://github.com/paritytech/schnorrkel-js/
 // forked at commit eff430ddc3090f56317c80654208b8298ef7ab3f
 
 use schnorrkel::{
-    derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
-    Keypair, MiniSecretKey, PublicKey, SecretKey, Signature,
-    context::signing_context, vrf::{VRFOutput, VRFProof}, SignatureError};
+    context::signing_context,
+    derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, Keypair, MiniSecretKey, PublicKey, SecretKey,
+    Signature, SignatureError, vrf::{VRFOutput, VRFProof}, ExpansionMode};
 
 use std::ptr;
 use std::slice;
@@ -45,11 +45,12 @@ fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
         SignatureError::EquationFalse => Sr25519SignatureResult::EquationFalse,
         SignatureError::PointDecompressionError => Sr25519SignatureResult::PointDecompressionError,
         SignatureError::ScalarFormatError => Sr25519SignatureResult::ScalarFormatError,
-        SignatureError::BytesLengthError {name: _, description: _, length: _}
-            => Sr25519SignatureResult::BytesLengthError,
-        SignatureError::MuSigAbsent {musig_stage: _} => Sr25519SignatureResult::MuSigAbsent,
-        SignatureError::MuSigInconsistent {musig_stage: _, duplicate: _}
-            => Sr25519SignatureResult::MuSigInconsistent,
+        SignatureError::BytesLengthError { name: _, description: _, length: _ }
+        => Sr25519SignatureResult::BytesLengthError,
+        SignatureError::MuSigAbsent { musig_stage: _ } => Sr25519SignatureResult::MuSigAbsent,
+        SignatureError::MuSigInconsistent { musig_stage: _, duplicate: _ }
+        => Sr25519SignatureResult::MuSigInconsistent,
+        SignatureError::NotMarkedSchnorrkel => Sr25519SignatureResult::NotMarkedSchnorrkel
     }
 }
 
@@ -68,7 +69,7 @@ fn create_cc(data: &[u8]) -> ChainCode {
 /// Keypair helper function.
 fn create_from_seed(seed: &[u8]) -> Keypair {
     match MiniSecretKey::from_bytes(seed) {
-        Ok(mini) => return mini.expand_to_keypair(),
+        Ok(mini) => return mini.expand_to_keypair(ExpansionMode::Ed25519),
         Err(_) => panic!("Provided seed is invalid."),
     }
 }
@@ -141,7 +142,7 @@ pub unsafe extern "C" fn sr25519_derive_keypair_hard(
         .secret
         .hard_derive_mini_secret_key(Some(create_cc(cc)), &[])
         .0
-        .expand_to_keypair();
+        .expand_to_keypair(ExpansionMode::Ed25519);
 
     ptr::copy(kp.to_bytes().as_ptr(), keypair_out, SR25519_KEYPAIR_SIZE as usize);
 }
@@ -259,7 +260,7 @@ pub unsafe extern "C" fn sr25519_verify(
         Err(_) => return false,
     };
 
-    create_public(public).verify_simple(SIGNING_CTX, message, &signature)
+    create_public(public).verify_simple(SIGNING_CTX, message, &signature).is_ok()
 }
 
 #[repr(C)]
@@ -289,7 +290,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
     let res =
-        keypair.vrf_sign_n_check(
+        keypair.vrf_sign_after_check(
             signing_context(SIGNING_CTX).bytes(message),
             |x| x.as_output_bytes().as_ref().lt(&limit));
     if let Some((io, proof, _)) = res {
@@ -350,7 +351,6 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
 pub mod tests {
     extern crate rand;
     extern crate schnorrkel;
-
     use super::*;
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
