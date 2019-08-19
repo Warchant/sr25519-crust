@@ -11,17 +11,17 @@ extern crate schnorrkel;
 // of the Apache-2.0 license. See the LICENSE file for details.
 
 // Originally developed (as a fork) in https://github.com/polkadot-js/schnorrkel-js/
-// which was adpated from the initial https://github.com/paritytech/schnorrkel-js/
+// which was adopted from the initial https://github.com/paritytech/schnorrkel-js/
 // forked at commit eff430ddc3090f56317c80654208b8298ef7ab3f
-
-use std::os::raw::c_ulong;
-use std::ptr;
-use std::slice;
 
 use schnorrkel::{
     context::signing_context,
     derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, Keypair, MiniSecretKey, PublicKey, SecretKey,
     Signature, SignatureError, vrf::{VRFOutput, VRFProof}, ExpansionMode};
+
+use std::ptr;
+use std::slice;
+use std::os::raw::c_ulong;
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -351,11 +351,9 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
 pub mod tests {
     extern crate rand;
     extern crate schnorrkel;
-
+    use super::*;
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
-
-    use super::*;
 
     fn generate_random_seed() -> Vec<u8> {
         (0..32).map(|_| rand::random::<u8>()).collect()
