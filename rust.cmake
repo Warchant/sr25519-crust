@@ -42,6 +42,8 @@ endfunction()
 
 ifd_install(${include_path} ${CMAKE_INSTALL_INCLUDEDIR})
 ifd_install(${lib} ${CMAKE_INSTALL_LIBDIR})
+ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
+ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config-noconfig.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
 
 
 ### setup tasks
