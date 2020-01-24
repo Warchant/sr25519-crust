@@ -56,6 +56,7 @@ fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
+pub const BABE_VRF_PREFIX: &'static [u8] = b"substrate-babe-vrf";
 
 /// ChainCode construction helper
 fn create_cc(data: &[u8]) -> ChainCode {
@@ -116,8 +117,20 @@ pub const SR25519_SIGNATURE_SIZE: c_ulong = 64;
 /// Size of SR25519 KEYPAIR. [32 bytes key | 32 bytes nonce | 32 bytes public]
 pub const SR25519_KEYPAIR_SIZE: c_ulong = 96;
 
+/// Size of VRF limit, bytes
+pub const SR25519_VRF_LIMIT_SIZE: c_ulong = 16;
+
+/// Size of VRF input, bytes
+pub const SR25519_VRF_INPUT_SIZE: c_ulong = 32;
+
 /// Size of VRF output, bytes
 pub const SR25519_VRF_OUTPUT_SIZE: c_ulong = 32;
+
+/// Size of VRF raw output, bytes
+pub const SR25519_VRF_RAW_OUTPUT_SIZE: c_ulong = 16;
+
+/// Size of VRF input + output, bytes
+pub const SR25519_VRF_IN_OUT_SIZE: c_ulong = 64;
 
 /// Size of VRF proof, bytes
 pub const SR25519_VRF_PROOF_SIZE: c_ulong = 64;
@@ -272,14 +285,16 @@ pub struct VrfSignResult {
 /// Sign the provided message using a Verifiable Random Function and
 /// if the result is less than \param limit provide the proof
 /// @param out_and_proof_ptr pointer to output array, where the VRF out and proof will be written
+/// @param raw_out_ptr pointer to output array, where the VRF raw out will be written
 /// @param keypair_ptr byte representation of the keypair that will be used during signing
 /// @param message_ptr byte array to be signed
-/// @param limit_ptr byte array, must be 32 bytes long
+/// @param limit_ptr byte array, must be 16 bytes long
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     out_and_proof_ptr: *mut u8,
+    raw_out_ptr: *mut u8,
     keypair_ptr: *const u8,
     message_ptr: *const u8,
     message_length: c_ulong,
@@ -288,19 +303,52 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
     let keypair = create_from_pair(keypair_bytes);
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
-    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_LIMIT_SIZE as usize);
+    let mut limit_arr: [u8; SR25519_VRF_LIMIT_SIZE as usize] = Default::default();
+    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_LIMIT_SIZE as usize]);
     let res =
-        keypair.vrf_sign_after_check(
-            signing_context(SIGNING_CTX).bytes(message),
-            |x| x.as_output_bytes().as_ref().lt(&limit));
-    if let Some((io, proof, _)) = res {
-        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+        keypair.vrf_sign(
+            signing_context(SIGNING_CTX).bytes(message));
+    let limit_int = u128::from_le_bytes(limit_arr);
+
+    let inout = keypair.vrf_create_hash(signing_context(SIGNING_CTX).bytes(message));
+    let raw_out_bytes = inout.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+
+    let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
+
+    if check {
+        let (io, proof, _) = res;
+        ptr::copy(io.output.to_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
         ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
+        ptr::copy(raw_out_bytes.as_ptr(), raw_out_ptr, SR25519_VRF_RAW_OUTPUT_SIZE as usize);
         return VrfSignResult { is_less: true, result: Sr25519SignatureResult::Ok };
     } else {
         return VrfSignResult { is_less: false, result: Sr25519SignatureResult::Ok };
     }
 }
+
+/// Check if \param output is less than \param limit using a Verifiable Random Function
+/// @param raw_out_ptr pointer to output array, where the VRF  raw out is stored
+/// @param limit_ptr byte array, must be 16 bytes long
+///
+#[allow(unused_attributes)]
+#[no_mangle]
+pub unsafe extern "C" fn sr25519_vrf_check_if_less(
+    raw_out_ptr: *const u8,
+    limit_ptr: *const u8) -> bool {
+    let raw_out_bytes = slice::from_raw_parts(raw_out_ptr, SR25519_VRF_RAW_OUTPUT_SIZE as usize);
+    let mut raw_out_arr: [u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize] = Default::default();
+    raw_out_arr.copy_from_slice(&raw_out_bytes[0..SR25519_VRF_RAW_OUTPUT_SIZE as usize]);
+
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_LIMIT_SIZE as usize);
+    let mut limit_arr: [u8; SR25519_VRF_LIMIT_SIZE as usize] = Default::default();
+    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_LIMIT_SIZE as usize]);
+    let limit_int = u128::from_le_bytes(limit_arr);
+
+    let check = u128::from_le_bytes(raw_out_arr) < limit_int;
+    return check;
+}
+
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof
 /// @param public_key_ptr byte representation of the public key that was used to sign the message
