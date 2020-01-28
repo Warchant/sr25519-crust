@@ -405,6 +405,8 @@ pub mod tests {
     extern crate rand;
     extern crate schnorrkel;
 
+    use super::*;
+
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 
