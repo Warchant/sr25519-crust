@@ -18,7 +18,7 @@ TEST(VrfTest, Verify) {
       out_and_proof;
 
   auto message = "Hello, world!"_v;
-  auto limit = std::vector<uint8_t>(32, 0xFF);
+  auto limit = std::vector<uint8_t>(16, 0xFF);
 
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
@@ -28,14 +28,15 @@ TEST(VrfTest, Verify) {
 
   auto res2 = sr25519_vrf_verify(
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
-      out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE);
-  ASSERT_EQ(res2, Sr25519SignatureResult::Ok);
+      out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE, limit.data());
+  ASSERT_EQ(res2.result, Sr25519SignatureResult::Ok);
+  ASSERT_TRUE(res2.is_less);
 
   out_and_proof[5] += 3;
   auto res3 = sr25519_vrf_verify(
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
-      out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE);
-  ASSERT_NE(res3, Sr25519SignatureResult::Ok);
+      out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE, limit.data());
+  ASSERT_NE(res3.result, Sr25519SignatureResult::Ok);
 
 
 }
@@ -46,7 +47,7 @@ TEST(VrfTest, ResultNotLess) {
       out_and_proof;
 
   auto message = "Hello, world!"_v;
-  auto limit = std::vector<uint8_t>(32, 0xAA);
+  auto limit = std::vector<uint8_t>(16, 0x55);
 
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),

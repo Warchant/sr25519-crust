@@ -14,14 +14,15 @@ extern crate schnorrkel;
 // which was adopted from the initial https://github.com/paritytech/schnorrkel-js/
 // forked at commit eff430ddc3090f56317c80654208b8298ef7ab3f
 
-use schnorrkel::{
-    context::signing_context,
-    derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, Keypair, MiniSecretKey, PublicKey, SecretKey,
-    Signature, SignatureError, vrf::{VRFOutput, VRFProof}, ExpansionMode};
-
+use std::os::raw::c_ulong;
 use std::ptr;
 use std::slice;
-use std::os::raw::c_ulong;
+
+use schnorrkel::{
+    context::signing_context,
+    derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, ExpansionMode, Keypair, MiniSecretKey, PublicKey,
+    SecretKey, Signature, SignatureError, vrf::{VRFOutput, VRFProof}};
+use std::fmt::{Formatter, Error};
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -56,6 +57,7 @@ fn convert_error(err: &SignatureError) -> Sr25519SignatureResult {
 
 // We must make sure that this is the same as declared in the substrate source code.
 const SIGNING_CTX: &'static [u8] = b"substrate";
+pub const BABE_VRF_PREFIX: &'static [u8] = b"substrate-babe-vrf";
 
 /// ChainCode construction helper
 fn create_cc(data: &[u8]) -> ChainCode {
@@ -122,6 +124,11 @@ pub const SR25519_VRF_OUTPUT_SIZE: c_ulong = 32;
 /// Size of VRF proof, bytes
 pub const SR25519_VRF_PROOF_SIZE: c_ulong = 64;
 
+/// Size of VRF raw output, bytes
+pub const SR25519_VRF_RAW_OUTPUT_SIZE: c_ulong = 16;
+
+/// Size of VRF limit, bytes
+pub const SR25519_VRF_THRESHOLD_SIZE: c_ulong = 16;
 
 /// Perform a derivation on a secret
 ///
@@ -264,9 +271,30 @@ pub unsafe extern "C" fn sr25519_verify(
 }
 
 #[repr(C)]
-pub struct VrfSignResult {
+pub struct VrfResult {
     pub result: Sr25519SignatureResult,
     pub is_less: bool,
+}
+
+impl VrfResult {
+    fn create_err(err: &SignatureError) -> VrfResult {
+        VrfResult { is_less: false, result: convert_error(&err) }
+    }
+
+    fn create_val(is_less: bool) -> VrfResult {
+        VrfResult { is_less, result: Sr25519SignatureResult::Ok }
+    }
+}
+
+impl std::fmt::Debug for VrfResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_str("VrfResult { ")?;
+        f.write_str(self.is_less.to_string().as_str())?;
+        f.write_str(", ")?;
+        write!(f, "{:?}", self)?;
+        f.write_str(" }")?;
+        Result::Ok(())
+    }
 }
 
 /// Sign the provided message using a Verifiable Random Function and
@@ -284,29 +312,44 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     message_ptr: *const u8,
     message_length: c_ulong,
     limit_ptr: *const u8,
-) -> VrfSignResult {
+) -> VrfResult {
     let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
     let keypair = create_from_pair(keypair_bytes);
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
-    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut limit_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+
     let res =
-        keypair.vrf_sign_after_check(
-            signing_context(SIGNING_CTX).bytes(message),
-            |x| x.as_output_bytes().as_ref().lt(&limit));
-    if let Some((io, proof, _)) = res {
-        ptr::copy(io.as_output_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+        keypair.vrf_sign(
+            signing_context(SIGNING_CTX).bytes(message));
+
+    let limit_int = u128::from_le_bytes(limit_arr);
+
+    let inout = keypair.vrf_create_hash(signing_context(SIGNING_CTX).bytes(message));
+    let raw_out_bytes = inout.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+
+    let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
+
+    if check {
+        let (io, proof, _) = res;
+        ptr::copy(io.output.to_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
         ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
-        return VrfSignResult { is_less: true, result: Sr25519SignatureResult::Ok };
+        VrfResult::create_val(true)
     } else {
-        return VrfSignResult { is_less: false, result: Sr25519SignatureResult::Ok };
+        VrfResult::create_val(false)
     }
 }
 
-/// Verify a signature produced by a VRF with its original input and the corresponding proof
+/// Verify a signature produced by a VRF with its original input and the corresponding proof and
+/// check if the result of the function is less than the threshold.
+/// @note If errors, is_less of the returned structure is not meant to contain a valid value
 /// @param public_key_ptr byte representation of the public key that was used to sign the message
 /// @param message_ptr the orignal signed message
 /// @param output_ptr the signature
 /// @param proof_ptr the proof of the signature
+/// @param threshold_ptr the threshold to be compared against
 #[allow(unused_attributes)]
 #[no_mangle]
 pub unsafe extern "C" fn sr25519_vrf_verify(
@@ -315,35 +358,45 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     message_length: c_ulong,
     output_ptr: *const u8,
     proof_ptr: *const u8,
-) -> Sr25519SignatureResult {
+    threshold_ptr: *const u8,
+) -> VrfResult {
     let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let ctx = signing_context(SIGNING_CTX).bytes(message);
     let vrf_out = match VRFOutput::from_bytes(
         slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
         Ok(val) => val,
-        Err(err) => return convert_error(&err)
+        Err(err) => return VrfResult::create_err(&err)
     };
     let vrf_proof = match VRFProof::from_bytes(
         slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
         Ok(val) => val,
-        Err(err) => return convert_error(&err)
+        Err(err) => return VrfResult::create_err(&err)
     };
     let (in_out, proof) =
         match public_key.vrf_verify(ctx.clone(), &vrf_out, &vrf_proof) {
             Ok(val) => val,
-            Err(err) => return convert_error(&err)
+            Err(err) => return VrfResult::create_err(&err)
         };
+    let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+
+    let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+    let threshold_int = u128::from_le_bytes(threshold_arr);
+
+    let check = u128::from_le_bytes(raw_output) < threshold_int;
+
     let decomp_proof = match
         proof.shorten_vrf(&public_key, ctx.clone(), &in_out.to_output()) {
         Ok(val) => val,
-        Err(e) => return convert_error(&e)
+        Err(e) => return VrfResult::create_err(&e)
     };
     if in_out.to_output() == vrf_out &&
         decomp_proof == vrf_proof {
-        Sr25519SignatureResult::Ok
+        VrfResult::create_val(check)
     } else {
-        convert_error(&SignatureError::EquationFalse)
+        VrfResult::create_err(&SignatureError::EquationFalse)
     }
 }
 
@@ -351,9 +404,11 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
 pub mod tests {
     extern crate rand;
     extern crate schnorrkel;
-    use super::*;
+
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
+
+    use super::*;
 
     fn generate_random_seed() -> Vec<u8> {
         (0..32).map(|_| rand::random::<u8>()).collect()
@@ -490,11 +545,12 @@ pub mod tests {
             &keypair.public, ctx.clone(), &io.to_output()).expect("Shorten VRF");
         assert_eq!(proof, decomp_proof);
         unsafe {
+            let threshold_bytes = [0u8; SR25519_VRF_THRESHOLD_SIZE as usize];
             let res = sr25519_vrf_verify(public.as_ptr(),
                                          message.as_ptr(), message.len() as c_ulong,
                                          io.as_output_bytes().as_ptr(),
-                                         proof.to_bytes().as_ptr());
-            assert_eq!(res, Sr25519SignatureResult::Ok);
+                                         proof.to_bytes().as_ptr(), threshold_bytes.as_ptr());
+            assert_eq!(res.result, Sr25519SignatureResult::Ok);
         }
     }
 }
