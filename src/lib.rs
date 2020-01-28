@@ -302,7 +302,7 @@ impl std::fmt::Debug for VrfResult {
 /// @param out_and_proof_ptr pointer to output array, where the VRF out and proof will be written
 /// @param keypair_ptr byte representation of the keypair that will be used during signing
 /// @param message_ptr byte array to be signed
-/// @param limit_ptr byte array, must be 32 bytes long
+/// @param limit_ptr byte array, must be 16 bytes long
 ///
 #[allow(unused_attributes)]
 #[no_mangle]
@@ -407,8 +407,6 @@ pub mod tests {
 
     use hex_literal::hex;
     use schnorrkel::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
-
-    use super::*;
 
     fn generate_random_seed() -> Vec<u8> {
         (0..32).map(|_| rand::random::<u8>()).collect()
