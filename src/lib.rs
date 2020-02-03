@@ -321,21 +321,17 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     let mut limit_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
     limit_arr.copy_from_slice(&limit[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
 
-    let res =
+    let (io, proof, _) =
         keypair.vrf_sign(
             signing_context(SIGNING_CTX).bytes(message));
-
     let limit_int = u128::from_le_bytes(limit_arr);
 
-    let inout = keypair.vrf_create_hash(signing_context(SIGNING_CTX).bytes(message));
-    let raw_out_bytes = inout.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
-
+    let raw_out_bytes = io.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
     let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
 
+    ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+    ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
     if check {
-        let (io, proof, _) = res;
-        ptr::copy(io.output.to_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
-        ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
         VrfResult::create_val(true)
     } else {
         VrfResult::create_val(false)
@@ -344,7 +340,7 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof and
 /// check if the result of the function is less than the threshold.
-/// @note If errors, is_less of the returned structure is not meant to contain a valid value
+/// @note If errors, is_less field of the returned structure is not meant to contain a valid value
 /// @param public_key_ptr byte representation of the public key that was used to sign the message
 /// @param message_ptr the orignal signed message
 /// @param output_ptr the signature
@@ -363,18 +359,18 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
     let message = slice::from_raw_parts(message_ptr, message_length as usize);
     let ctx = signing_context(SIGNING_CTX).bytes(message);
-    let vrf_out = match VRFOutput::from_bytes(
+    let given_out = match VRFOutput::from_bytes(
         slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
         Ok(val) => val,
         Err(err) => return VrfResult::create_err(&err)
     };
-    let vrf_proof = match VRFProof::from_bytes(
+    let given_proof = match VRFProof::from_bytes(
         slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
         Ok(val) => val,
         Err(err) => return VrfResult::create_err(&err)
     };
     let (in_out, proof) =
-        match public_key.vrf_verify(ctx.clone(), &vrf_out, &vrf_proof) {
+        match public_key.vrf_verify(ctx.clone(), &given_out, &given_proof) {
             Ok(val) => val,
             Err(err) => return VrfResult::create_err(&err)
         };
@@ -392,8 +388,8 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
         Ok(val) => val,
         Err(e) => return VrfResult::create_err(&e)
     };
-    if in_out.to_output() == vrf_out &&
-        decomp_proof == vrf_proof {
+    if in_out.to_output() == given_out &&
+        decomp_proof == given_proof {
         VrfResult::create_val(check)
     } else {
         VrfResult::create_err(&SignatureError::EquationFalse)
@@ -421,7 +417,6 @@ pub mod tests {
         unsafe { sr25519_keypair_from_seed(keypair.as_mut_ptr(), seed.as_ptr()) };
 
         assert_eq!(keypair.len(), KEYPAIR_LENGTH);
-        println!("{:?}", keypair.to_vec());
     }
 
     #[test]
