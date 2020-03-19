@@ -91,6 +91,7 @@ install:
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then
       pip3 install --user pyyaml
     fi
+    sudo pip3 install --upgrade pip
     pip3 install --user --upgrade scikit-build requests gitpython cmake gcovr
 before_script:
   - cmake --version
