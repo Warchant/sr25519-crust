@@ -21,7 +21,6 @@ message(STATUS "[sr25519] library: ${lib}")
 set(include_path ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(sr25519_h_dir ${include_path}/sr25519)
 
-
 ### setup install task
 include(GNUInstallDirs)
 function(ifd_install what where)
@@ -40,8 +39,10 @@ function(ifd_install what where)
 endfunction()
 
 
-ifd_install(${include_path} ${CMAKE_INSTALL_INCLUDEDIR})
+ifd_install(${sr25519_h_dir} ${CMAKE_INSTALL_INCLUDEDIR})
 ifd_install(${lib} ${CMAKE_INSTALL_LIBDIR})
+ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
+ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config-noconfig.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
 
 
 ### setup tasks
