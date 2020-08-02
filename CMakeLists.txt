@@ -6,7 +6,7 @@ if (CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
-option(TESTING  "Enable tests" OFF)
+option(TESTING "Enable tests" OFF)
 
 if (TESTING)
   include("cmake/3rdparty/Hunter/init.cmake")
@@ -17,12 +17,11 @@ if (TESTING)
 endif ()
 
 project(sr25519crust CXX)
-enable_testing()
 
 include(FindPackageHandleStandardArgs)
 include(cmake/functions.cmake)
 
-include(rust.cmake)
+include(cmake/rust.cmake)
 
 if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
@@ -34,5 +33,6 @@ endif ()
 
 
 if (TESTING)
+  enable_testing()
   add_subdirectory(test)
 endif ()

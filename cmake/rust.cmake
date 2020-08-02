@@ -18,31 +18,8 @@ endif ()
 message(STATUS "[sr25519] library: ${lib}")
 
 
-set(include_path ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(include_path ${PROJECT_SOURCE_DIR}/include)
 set(sr25519_h_dir ${include_path}/sr25519)
-
-### setup install task
-include(GNUInstallDirs)
-function(ifd_install what where)
-  message(STATUS "[sr25519] '${what}' will be installed to '${where}'")
-  if (IS_DIRECTORY ${what})
-    install(
-        DIRECTORY ${what}
-        DESTINATION ${where}
-    )
-  else ()
-    install(
-        FILES ${what}
-        DESTINATION ${where}
-    )
-  endif ()
-endfunction()
-
-
-ifd_install(${sr25519_h_dir} ${CMAKE_INSTALL_INCLUDEDIR})
-ifd_install(${lib} ${CMAKE_INSTALL_LIBDIR})
-ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
-ifd_install(${CMAKE_SOURCE_DIR}/sr25519Config-noconfig.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519)
 
 
 ### setup tasks
@@ -50,7 +27,7 @@ add_custom_target(
     cargo_build
     ALL
     COMMAND cargo build --target-dir ${CMAKE_BINARY_DIR} ${release_option}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
 add_library(sr25519 STATIC IMPORTED GLOBAL)
@@ -91,5 +68,22 @@ file(MAKE_DIRECTORY ${sr25519_h_dir})
 add_test(
     NAME cargo_test
     COMMAND cargo test
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+
+### setup install task
+include(GNUInstallDirs)
+
+install(
+    DIRECTORY ${sr25519_h_dir}
+    TYPE INCLUDE
+)
+install(
+    FILES ${lib}
+    TYPE LIB
+)
+
+install(
+    FILES ${PROJECT_SOURCE_DIR}/cmake/sr25519Config.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sr25519
 )
