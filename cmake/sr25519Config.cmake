@@ -1,8 +1,4 @@
 
-# find include
-
-
-# find library
 find_library(
     lib
     NAMES sr25519
@@ -16,9 +12,9 @@ find_path(
     REQUIRED
 )
 
-add_library(sr25519 STATIC IMPORTED GLOBAL)
+add_library(sr25519::sr25519 STATIC IMPORTED GLOBAL)
 
-set_target_properties(sr25519 PROPERTIES
+set_target_properties(sr25519::sr25519 PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${include_path}
     IMPORTED_LOCATION ${lib}
     )
