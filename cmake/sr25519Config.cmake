@@ -28,15 +28,15 @@ if(NOT TARGET sr25519::sr25519)
         if (APPLE)
             # on apple we need to link Security
             find_library(Security Security)
-            find_package_handle_standard_args(sr25519
+            find_package_handle_standard_args(sr25519::sr25519
                 REQUIRED_VARS Security
                 )
-            set_target_properties(sr25519 PROPERTIES
+            set_target_properties(sr25519::sr25519 PROPERTIES
                 INTERFACE_LINK_LIBRARIES ${Security}
                 )
         elseif (UNIX)
             # on Linux we need to link pthread
-            target_link_libraries(sr25519 INTERFACE
+            target_link_libraries(sr25519::sr25519 INTERFACE
                 pthread
                 -Wl,--no-as-needed
                 dl
