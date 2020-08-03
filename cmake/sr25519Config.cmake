@@ -15,9 +15,11 @@ if(NOT EXISTS ${CMAKE_INSTALL_INCLUDEDIR}/${include_path})
     message(ERROR "sr25519 header not found!")
 endif()
 
-add_library(sr25519::sr25519 STATIC IMPORTED GLOBAL)
+if(NOT TARGET sr25519::sr25519)
+    add_library(sr25519::sr25519 STATIC IMPORTED GLOBAL)
 
-set_target_properties(sr25519::sr25519 PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_INSTALL_INCLUDEDIR}/${include_path}
-    IMPORTED_LOCATION ${CMAKE_INSTALL_LIBDIR}/${lib}
-    )
+    set_target_properties(sr25519::sr25519 PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES ${_IMPORT_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${include_path}
+        IMPORTED_LOCATION ${_IMPORT_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${lib}
+        )
+endif()
