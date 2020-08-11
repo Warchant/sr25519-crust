@@ -43,13 +43,3 @@ function(add_flag flag)
     add_compile_options(${flag})
   endif ()
 endfunction()
-
-
-function(must_have_exe exe)
-  find_program(EXE_${exe} ${exe})
-  if(EXE_${exe})
-    message(STATUS "Found ${exe}: ${EXE_${exe}}")
-  else()
-    message(FATAL_ERROR "${exe} not found.")
-  endif()
-endfunction()

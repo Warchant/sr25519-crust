@@ -1,5 +1,5 @@
-must_have_exe(rustc)
-must_have_exe(cargo)
+find_program(RUSTC rustc REQUIRED)
+find_program(CARGO cargo REQUIRED)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
   set(path_prefix "${CMAKE_BINARY_DIR}/release")
