@@ -16,7 +16,7 @@ if (TESTING)
   )
 endif ()
 
-project(sr25519crust CXX)
+project(_25519crust CXX)
 enable_testing()
 
 include(FindPackageHandleStandardArgs)
