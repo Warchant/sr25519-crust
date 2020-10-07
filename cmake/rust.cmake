@@ -1,5 +1,5 @@
-must_have_exe(rustc)
-must_have_exe(cargo)
+find_program(RUSTC rustc REQUIRED)
+find_program(CARGO cargo REQUIRED)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
   set(path_prefix "${CMAKE_BINARY_DIR}/release")
@@ -18,39 +18,15 @@ endif ()
 message(STATUS "[_25519] library: ${lib}")
 
 
-set(include_path ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(include_path ${PROJECT_SOURCE_DIR}/include)
 set(_25519_h_dir ${include_path}/_25519)
-
-### setup install task
-include(GNUInstallDirs)
-function(ifd_install what where)
-  message(STATUS "[_25519] '${what}' will be installed to '${where}'")
-  if (IS_DIRECTORY ${what})
-    install(
-        DIRECTORY ${what}
-        DESTINATION ${where}
-    )
-  else ()
-    install(
-        FILES ${what}
-        DESTINATION ${where}
-    )
-  endif ()
-endfunction()
-
-
-ifd_install(${_25519_h_dir} ${CMAKE_INSTALL_INCLUDEDIR})
-ifd_install(${lib} ${CMAKE_INSTALL_LIBDIR})
-ifd_install(${CMAKE_SOURCE_DIR}/_25519Config.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/_25519)
-ifd_install(${CMAKE_SOURCE_DIR}/_25519Config-noconfig.cmake ${CMAKE_INSTALL_LIBDIR}/cmake/_25519)
-
 
 ### setup tasks
 add_custom_target(
     cargo_build
     ALL
     COMMAND cargo build --target-dir ${CMAKE_BINARY_DIR} ${release_option}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
 add_library(_25519 STATIC IMPORTED GLOBAL)
@@ -91,5 +67,22 @@ file(MAKE_DIRECTORY ${_25519_h_dir})
 add_test(
     NAME cargo_test
     COMMAND cargo test
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+
+### setup install task
+include(GNUInstallDirs)
+
+install(
+    DIRECTORY ${_25519_h_dir}
+    TYPE INCLUDE
+)
+install(
+    FILES ${lib}
+    TYPE LIB
+)
+
+install(
+    FILES ${PROJECT_SOURCE_DIR}/cmake/_25519Config.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/_25519
 )
