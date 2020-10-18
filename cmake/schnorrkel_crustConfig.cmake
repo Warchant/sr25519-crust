@@ -16,7 +16,7 @@ else()
     message(ERROR "schnorrkel_crust library not found!")
 endif()
 
-set(include_path schnorrkel_crust)
+set(include_path schnorrkel)
 if(NOT EXISTS ${_IMPORT_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${include_path})
     message(ERROR "schnorrkel_crust header not found!")
 endif()

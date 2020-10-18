@@ -23,10 +23,6 @@ include(cmake/functions.cmake)
 
 include(cmake/rust.cmake)
 
-if(TARGET schnorrkel_crust)
-  message(INFO Found)
-endif()
-
 if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
   set(CMAKE_CXX_STANDARD 17)
