@@ -1,9 +1,9 @@
 [![Build Status](https://travis-ci.org/Warchant/sr25519-crust.svg?branch=master)](https://travis-ci.org/Warchant/sr25519-crust)
 [![Gitter](https://badges.gitter.im/sr25519-crust/community.svg)](https://gitter.im/sr25519-crust/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-# sr25519-crust
+# Schnorrkel-crust
 
-C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com/w3f/schnorrkel) - Schnorr-on-ristretto255 scheme.
+C bindings over RUST implementations of [sr25519 (schnorrkel)](https://github.com/w3f/schnorrkel)  and [ed25519](https://github.com/dalek-cryptography/ed25519-dalek).
 
 ## Build
 
@@ -30,11 +30,15 @@ C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com
 
 ## Docs
 
-Header with comments will be generated in `build/include/sr25519/sr25519.h`.
+Header with comments will be generated in `build/include/schnorrkel/schnorrkel.h`.
 
 ## Examples
-
+### Sr25519
 - [Keypair derivation](test/sr25519/derive.cpp)
 - [Sign/Verify](test/sr25519/ds.cpp)
 - [Keypair from seed](test/sr25519/keypair_from_seed.cpp)
 - [Verifiable random function](test/sr25519/vrf.cpp)
+
+### Ed25519
+- [Keypair from seed](test/ed25519/test.cpp)
+- [Sign/Verify](test/ed25519/test.cpp)

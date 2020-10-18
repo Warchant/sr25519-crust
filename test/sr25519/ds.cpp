@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "utils.hpp"
+#include "../utils.hpp"
 #include <gtest/gtest.h>
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include <schnorrkel/schnorrkel.h>
 }
 
 TEST(sr25519, SignAndVerifyValid) {

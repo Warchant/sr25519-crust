@@ -9,5 +9,5 @@ fn main() {
         .with_config(Config::from_file("./cbindgen.toml").expect("Parsing config failed"))
         .generate()
         .expect("Unable to generate bindings")
-        .write_to_file("./include/_25519/_25519.h");
+        .write_to_file("./include/schnorrkel/schnorrkel.h");
 }

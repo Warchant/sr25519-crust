@@ -1,12 +1,12 @@
 [package]
-name = "sr25519crust"
+name = "schnorrkel_crust"
 version = "0.2.0"
 authors = ["Bogdan Vaneev <warchantua@gmail.com>", "Vladimir Shcherba <abrehchs@gmail.com>"]
 edition = "2018"
 build = "build.rs"
 
 [lib]
-name = "sr25519crust"
+name = "schnorrkel_crust"
 # probably we need to add dylib/lib/dll for mac/linux/windows
 crate-type = ["cdylib", "staticlib"]
 

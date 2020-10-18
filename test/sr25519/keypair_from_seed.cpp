@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "utils.hpp"
+#include "../utils.hpp"
 #include <gtest/gtest.h>
 #include <string>
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include <schnorrkel/schnorrkel.h>
 }
 
 struct Case1 {

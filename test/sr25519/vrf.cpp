@@ -6,10 +6,10 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <array>
-#include "utils.hpp"
+#include "../utils.hpp"
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include <schnorrkel/schnorrkel.h>
 }
 
 TEST(VrfTest, Verify) {
@@ -23,20 +23,20 @@ TEST(VrfTest, Verify) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
+  ASSERT_EQ(res1.result, SR25519_SIGNATURE_RESULT_OK);
   ASSERT_TRUE(res1.is_less);
 
   auto res2 = sr25519_vrf_verify(
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
       out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE, limit.data());
-  ASSERT_EQ(res2.result, Sr25519SignatureResult::Ok);
+  ASSERT_EQ(res2.result, SR25519_SIGNATURE_RESULT_OK);
   ASSERT_TRUE(res2.is_less);
 
   out_and_proof[5] += 3;
   auto res3 = sr25519_vrf_verify(
       keypair.data() + 64, message.data(), message.size(), out_and_proof.data(),
       out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE, limit.data());
-  ASSERT_NE(res3.result, Sr25519SignatureResult::Ok);
+  ASSERT_NE(res3.result, SR25519_SIGNATURE_RESULT_OK);
 
 
 }
@@ -52,7 +52,7 @@ TEST(VrfTest, ResultNotLess) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
+  ASSERT_EQ(res1.result, SR25519_SIGNATURE_RESULT_OK);
   EXPECT_FALSE(res1.is_less);
 }
 
@@ -67,6 +67,6 @@ TEST(VrfTest, SignAndCheck) {
   auto res1 =
       sr25519_vrf_sign_if_less(out_and_proof.data(), keypair.data(),
                                message.data(), message.size(), limit.data());
-  ASSERT_EQ(res1.result, Sr25519SignatureResult::Ok);
+  ASSERT_EQ(res1.result, SR25519_SIGNATURE_RESULT_OK);
   EXPECT_TRUE(res1.is_less);
 }

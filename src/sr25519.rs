@@ -405,9 +405,6 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
 
 #[cfg(test)]
 pub mod tests {
-    extern crate rand;
-    extern crate schnorrkel;
-
     use super::*;
 
     use hex_literal::hex;
