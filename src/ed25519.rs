@@ -1,10 +1,7 @@
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, Signer, Keypair, Verifier, PublicKey, KEYPAIR_LENGTH, SecretKey};
 use std::os::raw::{c_ulong};
 use std::{slice, ptr};
-use rand_chacha::{ChaCha20Rng};
 use ed25519_dalek::ed25519::signature::Signature;
-use rand_chacha::rand_core::SeedableRng;
-use std::convert::TryFrom;
 
 /// Length of a random generator seed
 pub const ED25519_SEED_LENGTH: c_ulong = 32;
@@ -131,6 +128,9 @@ pub unsafe extern "C" fn ed25519_sign(signature_out: *mut u8,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand_chacha::{ChaCha20Rng};
+    use rand_chacha::rand_core::SeedableRng;
+
 
     fn generate_random_seed() -> Vec<u8> {
         (0..32).map(|_| rand::random::<u8>()).collect()
