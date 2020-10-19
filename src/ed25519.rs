@@ -1,5 +1,4 @@
-use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
-                    Signer, Keypair, Verifier, PublicKey, KEYPAIR_LENGTH};
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, Signer, Keypair, Verifier, PublicKey, KEYPAIR_LENGTH, SecretKey};
 use std::os::raw::{c_ulong};
 use std::{slice, ptr};
 use rand_chacha::{ChaCha20Rng};
@@ -76,36 +75,23 @@ pub unsafe extern "C" fn ed25519_verify(signature_ptr: *const u8,
 
 /**
  * Generate a keypair using the provided seed
+ * @arg seed_ptr - the seed that will be used as a secret key
  */
 #[no_mangle]
-pub unsafe extern "C" fn ed25519_keypair_from_seed(keypair_out: *mut u8, seed_ptr: *const u8) -> Ed25519Result {
+pub unsafe extern "C" fn ed25519_keypair_from_seed(
+    keypair_out: *mut u8,
+    seed_ptr: *const u8) -> Ed25519Result {
+
     if keypair_out.is_null() || seed_ptr.is_null() {
         return Ed25519Result::NullArgument;
     }
 
     let seed = slice::from_raw_parts(seed_ptr, ED25519_SEED_LENGTH as usize);
-    let mut csprng = ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed).expect("Error initializing CSPRNG"));
-    let keypair: Keypair = Keypair::generate(&mut csprng);
+    let secret_key = SecretKey::from_bytes(seed)
+        .map_err(|e| Ed25519Result::KeypairFromBytesFailed)?;
+    let public_key: PublicKey = (&secret_key).into();
+    let keypair = Keypair {public: public_key, secret: secret_key};
     ptr::copy_nonoverlapping(keypair.to_bytes().as_ptr(), keypair_out, KEYPAIR_LENGTH);
-    Ed25519Result::Ok
-}
-
-/**
- * Obtain the public key from the keypair
- */
-#[no_mangle]
-pub unsafe extern "C" fn ed25519_extract_public_key(public_key_out: *mut u8, keypair_ptr: *const u8)
-                                                    -> Ed25519Result {
-    if keypair_ptr.is_null()
-    {
-        return Ed25519Result::NullArgument;
-    }
-    let keypair_bytes = slice::from_raw_parts(keypair_ptr, KEYPAIR_LENGTH);
-    let keypair = match Keypair::from_bytes(keypair_bytes) {
-        Ok(kp) => kp,
-        Err(_) => return Ed25519Result::KeypairFromBytesFailed,
-    };
-    ptr::copy_nonoverlapping(keypair.public.to_bytes().as_ptr(), public_key_out, PUBLIC_KEY_LENGTH);
     Ed25519Result::Ok
 }
 
@@ -176,16 +162,15 @@ mod tests {
         let message = "Hello, world!\n";
         unsafe {
             let status = ed25519_sign(signature.as_mut_ptr(),
-                         keypair.as_ptr(),
-                         message.as_ptr(), message.len() as u64);
+                                      keypair.as_ptr(),
+                                      message.as_ptr(), message.len() as u64);
             assert_eq!(status, Ed25519Result::Ok);
         }
         unsafe {
             let status = ed25519_verify(signature.as_mut_ptr(),
-                         keypair[32..].as_ptr(),
-                         message.as_ptr(), message.len() as u64);
+                                        keypair[32..].as_ptr(),
+                                        message.as_ptr(), message.len() as u64);
             assert_eq!(status, Ed25519Result::Ok);
         }
-
     }
 }
