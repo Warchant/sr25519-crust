@@ -87,8 +87,10 @@ pub unsafe extern "C" fn ed25519_keypair_from_seed(
     }
 
     let seed = slice::from_raw_parts(seed_ptr, ED25519_SEED_LENGTH as usize);
-    let secret_key = SecretKey::from_bytes(seed)
-        .map_err(|e| Ed25519Result::KeypairFromBytesFailed)?;
+    let secret_key = match SecretKey::from_bytes(seed) {
+        Ok(key) => key,
+        Err(_) => return Ed25519Result::KeypairFromBytesFailed
+    };
     let public_key: PublicKey = (&secret_key).into();
     let keypair = Keypair {public: public_key, secret: secret_key};
     ptr::copy_nonoverlapping(keypair.to_bytes().as_ptr(), keypair_out, KEYPAIR_LENGTH);

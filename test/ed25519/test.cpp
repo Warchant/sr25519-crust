@@ -29,10 +29,7 @@ TEST(Ed25519, SignVerify) {
     status = ed25519_sign(signature.data(), keypair.data(), message.data(), message.size());
     ASSERT_EQ(status, ED25519_RESULT_OK);
 
-    std::array<uint8_t, ED25519_PUBLIC_KEY_LENGTH> public_key {};
-    status = ed25519_extract_public_key(public_key.data(), keypair.data());
-    ASSERT_EQ(status, ED25519_RESULT_OK);
-
+    auto public_key = std::vector<uint8_t>(keypair.begin() + ED25519_SECRET_KEY_LENGTH, keypair.end());
     status = ed25519_verify(signature.data(), public_key.data(), message.data(), message.size());
     ASSERT_EQ(status, ED25519_RESULT_OK);
 }
