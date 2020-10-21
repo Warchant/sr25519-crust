@@ -13,20 +13,18 @@
 #include <sstream>
 #include <vector>
 
-extern "C" {
-#include <sr25519/sr25519.h>
-};
-
 using std::string_literals::operator""s;
 
 inline std::vector<uint8_t>
-randomKeypair(size_t initseed = std::random_device()()) {
+randomKeypair(size_t keypair_length,
+              std::function<void(uint8_t *, const uint8_t *)> keypair_from_seed,
+              size_t initseed = std::random_device()()) {
   std::mt19937 gen(initseed);
-  std::vector<uint8_t> seed(SR25519_SEED_SIZE, 0);
+  std::vector<uint8_t> seed(keypair_length, 0);
   std::generate(seed.begin(), seed.end(), [&gen]() { return (uint8_t)gen(); });
 
-  std::vector<uint8_t> kp(SR25519_KEYPAIR_SIZE, 0);
-  sr25519_keypair_from_seed(kp.data(), seed.data());
+  std::vector<uint8_t> kp(keypair_length, 0);
+  keypair_from_seed(kp.data(), seed.data());
 
   return kp;
 }
@@ -52,7 +50,7 @@ inline std::vector<uint8_t> operator"" _v(const char *c, size_t s) {
   return std::vector<uint8_t>{c, c + s};
 }
 
-inline std::string hex(const std::vector<uint8_t> &v) {
+template <typename T> inline std::string hex(const T &v) {
   assert(!v.empty());
   static auto alphabet = "0123456789abcdef";
   std::string out(v.size() * 2, 0);

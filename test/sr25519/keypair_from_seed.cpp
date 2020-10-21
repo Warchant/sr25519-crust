@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "utils.hpp"
+#include "../utils.hpp"
 #include <gtest/gtest.h>
 #include <string>
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include <schnorrkel/schnorrkel.h>
 }
 
 struct Case1 {
@@ -28,8 +28,8 @@ std::vector<Case1> KeypairFromSeed::cases = {
     {"fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e"_unhex,
      "05d65584630d16cd4af6d0bec10f34bb504a5dcb62dba2122d49f5a663763d0afd190cce74df356432b410bd64682309d6dedb27c76845daf388557cbac3ca3446ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"s}};
 
-  TEST_P(KeypairFromSeed, ValidKeypairGenerated) {
-    auto [seed, expected] = GetParam();
+TEST_P(KeypairFromSeed, ValidKeypairGenerated) {
+  auto [seed, expected] = GetParam();
 
   std::vector<uint8_t> kp(SR25519_KEYPAIR_SIZE, 0);
   sr25519_keypair_from_seed(kp.data(), seed.data());

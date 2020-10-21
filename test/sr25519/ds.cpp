@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "utils.hpp"
+#include "../utils.hpp"
 #include <gtest/gtest.h>
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include <schnorrkel/schnorrkel.h>
 }
 
 TEST(sr25519, SignAndVerifyValid) {
@@ -48,7 +48,8 @@ TEST(sr25519, SignAndVerifyInvalid) {
 TEST(sr25519, VerifyExisting) {
   auto pub =
       "46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"_unhex;
-  auto secret = "05d65584630d16cd4af6d0bec10f34bb504a5dcb62dba2122d49f5a663763d0a"_unhex;
+  auto secret =
+      "05d65584630d16cd4af6d0bec10f34bb504a5dcb62dba2122d49f5a663763d0a"_unhex;
 
   auto msg = "this is a message"_v;
   auto sig =

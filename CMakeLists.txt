@@ -6,23 +6,22 @@ if (CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
-option(TESTING  "Enable tests" OFF)
+option(TESTING "Enable tests" OFF)
 
 if (TESTING)
   include("cmake/3rdparty/Hunter/init.cmake")
   HunterGate(
-      URL "https://github.com/ruslo/hunter/archive/v0.23.165.tar.gz"
-      SHA1 "5a73f91df5f6109c0bb1104d0c0ee423f7bece79"
+      URL "https://github.com/soramitsu/soramitsu-hunter/archive/v0.23.257-soramitsu1.tar.gz"
+      SHA1 "130ab680eefe8d85e30ade39fd273c9dd36717f5"
   )
 endif ()
 
-project(sr25519crust CXX)
-enable_testing()
+project(schnorrkel-crust CXX)
 
 include(FindPackageHandleStandardArgs)
 include(cmake/functions.cmake)
 
-include(rust.cmake)
+include(cmake/rust.cmake)
 
 if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
@@ -34,5 +33,6 @@ endif ()
 
 
 if (TESTING)
+  enable_testing()
   add_subdirectory(test)
 endif ()
