@@ -2,6 +2,7 @@ use std::os::raw::c_ulong;
 use std::ptr;
 use std::slice;
 
+pub use merlin::Transcript;
 use schnorrkel::{
     context::signing_context,
     derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, ExpansionMode, Keypair, MiniSecretKey, PublicKey,
@@ -344,6 +345,47 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
         VrfResult::create_val(false)
     }
 }
+
+/// Test sign the provided message using a Verifiable Random Function and
+/// if the result is less than \param limit provide the proof
+/// @param out_and_proof_ptr pointer to output array, where the VRF out and proof will be written
+/// @param keypair_ptr byte representation of the keypair that will be used during signing
+/// @param transacript pointer to transacript data
+/// @param limit_ptr byte array, must be 16 bytes long
+///
+#[allow(unused_attributes)]
+#[no_mangle]
+pub unsafe extern "C" fn sr25519_vrf_sign_test(
+    out_and_proof_ptr: *mut u8,
+    keypair_ptr: *const u8,
+    transacript: *const u8,
+    limit_ptr: *const u8,
+) -> VrfResult {
+    let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
+    let keypair = create_from_pair(keypair_bytes);
+
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut limit_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+
+    let t = std::mem::transmute::<*const u8, &mut Transcript>(transacript);
+
+    let (io, proof, _) =
+        keypair.vrf_sign(t);
+    let limit_int = u128::from_le_bytes(limit_arr);
+
+    let raw_out_bytes = io.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+    let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
+
+    ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+    ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
+    if check {
+        VrfResult::create_val(true)
+    } else {
+        VrfResult::create_val(false)
+    }
+}
+
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof and
 /// check if the result of the function is less than the threshold.

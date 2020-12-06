@@ -14,6 +14,7 @@ crate-type = ["cdylib", "staticlib"]
 schnorrkel = { version="0.9.1" }
 ed25519-dalek = { version="1.0.0" }
 rand_chacha = "0.2.2"
+merlin = { version = "2.0", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.3.1"
