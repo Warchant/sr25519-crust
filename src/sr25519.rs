@@ -386,6 +386,50 @@ pub unsafe extern "C" fn sr25519_vrf_sign_test(
     }
 }
 
+/// Verify a signature produced by a VRF with its original input and the corresponding proof and
+/// check if the result of the function is less than the threshold.
+/// @note If errors, is_less field of the returned structure is not meant to contain a valid value
+/// @param public_key_ptr byte representation of the public key that was used to sign the message
+/// @param message_ptr the orignal signed message
+/// @param output_ptr the signature
+/// @param proof_ptr the proof of the signature
+/// @param threshold_ptr the threshold to be compared against
+#[allow(unused_attributes)]
+#[no_mangle]
+pub unsafe extern "C" fn sr25519_vrf_verify_test(
+    public_key_ptr: *const u8,
+    transcript: *const u8,
+    output_ptr: *const u8,
+    proof_ptr: *const u8,
+    threshold_ptr: *const u8,
+) -> VrfResult {
+    let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
+    let t = std::mem::transmute::<*const u8, &mut Transcript>(transcript);
+    let given_out = match VRFOutput::from_bytes(
+        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
+        Ok(val) => val,
+        Err(err) => return VrfResult::create_err(&err)
+    };
+    let given_proof = match VRFProof::from_bytes(
+        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
+        Ok(val) => val,
+        Err(err) => return VrfResult::create_err(&err)
+    };
+    let (in_out, _) =
+        match public_key.vrf_verify(t, &given_out, &given_proof) {
+            Ok(val) => val,
+            Err(err) => return VrfResult::create_err(&err)
+        };
+    let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+
+    let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+    let threshold_int = u128::from_le_bytes(threshold_arr);
+
+    let check = u128::from_le_bytes(raw_output) < threshold_int;
+    VrfResult::create_val(check)
+}
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof and
 /// check if the result of the function is less than the threshold.
