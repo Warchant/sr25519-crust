@@ -346,91 +346,6 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
     }
 }
 
-/// Test sign the provided message using a Verifiable Random Function and
-/// if the result is less than \param limit provide the proof
-/// @param out_and_proof_ptr pointer to output array, where the VRF out and proof will be written
-/// @param keypair_ptr byte representation of the keypair that will be used during signing
-/// @param transacript pointer to transacript data
-/// @param limit_ptr byte array, must be 16 bytes long
-///
-#[allow(unused_attributes)]
-#[no_mangle]
-pub unsafe extern "C" fn sr25519_vrf_sign_test(
-    out_and_proof_ptr: *mut u8,
-    keypair_ptr: *const u8,
-    transacript: *const u8,
-    limit_ptr: *const u8,
-) -> VrfResult {
-    let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
-    let keypair = create_from_pair(keypair_bytes);
-
-    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
-    let mut limit_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
-    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
-
-    let t = std::mem::transmute::<*const u8, &mut Transcript>(transacript);
-
-    let (io, proof, _) =
-        keypair.vrf_sign(t);
-    let limit_int = u128::from_le_bytes(limit_arr);
-
-    let raw_out_bytes = io.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
-    let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
-
-    ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
-    ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
-    if check {
-        VrfResult::create_val(true)
-    } else {
-        VrfResult::create_val(false)
-    }
-}
-
-/// Verify a signature produced by a VRF with its original input and the corresponding proof and
-/// check if the result of the function is less than the threshold.
-/// @note If errors, is_less field of the returned structure is not meant to contain a valid value
-/// @param public_key_ptr byte representation of the public key that was used to sign the message
-/// @param message_ptr the orignal signed message
-/// @param output_ptr the signature
-/// @param proof_ptr the proof of the signature
-/// @param threshold_ptr the threshold to be compared against
-#[allow(unused_attributes)]
-#[no_mangle]
-pub unsafe extern "C" fn sr25519_vrf_verify_test(
-    public_key_ptr: *const u8,
-    transcript: *const u8,
-    output_ptr: *const u8,
-    proof_ptr: *const u8,
-    threshold_ptr: *const u8,
-) -> VrfResult {
-    let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
-    let t = std::mem::transmute::<*const u8, &mut Transcript>(transcript);
-    let given_out = match VRFOutput::from_bytes(
-        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
-        Ok(val) => val,
-        Err(err) => return VrfResult::create_err(&err)
-    };
-    let given_proof = match VRFProof::from_bytes(
-        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
-        Ok(val) => val,
-        Err(err) => return VrfResult::create_err(&err)
-    };
-    let (in_out, _) =
-        match public_key.vrf_verify(t, &given_out, &given_proof) {
-            Ok(val) => val,
-            Err(err) => return VrfResult::create_err(&err)
-        };
-    let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
-
-    let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
-    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
-    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
-    let threshold_int = u128::from_le_bytes(threshold_arr);
-
-    let check = u128::from_le_bytes(raw_output) < threshold_int;
-    VrfResult::create_val(check)
-}
-
 /// Verify a signature produced by a VRF with its original input and the corresponding proof and
 /// check if the result of the function is less than the threshold.
 /// @note If errors, is_less field of the returned structure is not meant to contain a valid value
@@ -488,6 +403,105 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
         VrfResult::create_err(&SignatureError::EquationFalse)
     }
 }
+
+/// This is literally a copy of Strobe128 from merlin lib
+/// Have to copy it as a workaround for passing a strobe object from C code
+/// Because the orignal Strobe128 structure is private and it is impossible to initialize it from
+/// a ready byte array
+#[repr(C)]
+#[derive(Clone)]
+pub struct Strobe128 {
+    state: [u8; 200],
+    pos: u8,
+    pos_begin: u8,
+    cur_flags: u8,
+}
+
+/// Sign the provided transcript using a Verifiable Random Function and
+/// if the result is less than \param limit provide the proof
+/// @param out_and_proof_ptr - pointer to output array, where the VRF out and proof will be written
+/// @param keypair_ptr - byte representation of the keypair that will be used during signing
+/// @param transcript_data - pointer to a Strobe object, which is an internal representation of the transcript data
+/// @param limit_ptr - byte array, must be 16 bytes long
+#[allow(unused_attributes)]
+#[no_mangle]
+pub unsafe extern "C" fn sr25519_vrf_sign_transcript(
+    out_and_proof_ptr: *mut u8,
+    keypair_ptr: *const u8,
+    transcript_data: *const Strobe128,
+    limit_ptr: *const u8,
+) -> VrfResult {
+    let keypair_bytes = slice::from_raw_parts(keypair_ptr, SR25519_KEYPAIR_SIZE as usize);
+    let keypair = create_from_pair(keypair_bytes);
+
+    let limit = slice::from_raw_parts(limit_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut limit_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    limit_arr.copy_from_slice(&limit[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+
+    let transcript = std::mem::transmute::<*const Strobe128, &mut Transcript>(transcript_data);
+
+    let (io, proof, _) =
+        keypair.vrf_sign(transcript);
+    let limit_int = u128::from_le_bytes(limit_arr);
+
+    let raw_out_bytes = io.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+    let check = u128::from_le_bytes(raw_out_bytes) < limit_int;
+
+    ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
+    ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
+    if check {
+        VrfResult::create_val(true)
+    } else {
+        VrfResult::create_val(false)
+    }
+}
+
+/// Verify a signature produced by a VRF with its original input transcript and the corresponding proof and
+/// check if the result of the function is less than the threshold.
+/// @note If errors, is_less field of the returned structure is not meant to contain a valid value
+/// @param public_key_ptr - byte representation of the public key that was used to sign the message
+/// @param transcript_data - pointer to a Strobe object, which is an internal representation
+///                          of the signed transcript data
+/// @param output_ptr - the signature
+/// @param proof_ptr - the proof of the signature
+/// @param threshold_ptr - the threshold to be compared against
+#[allow(unused_attributes)]
+#[no_mangle]
+pub unsafe extern "C" fn sr25519_vrf_verify_transcript(
+    public_key_ptr: *const u8,
+    transcript_data: *const Strobe128,
+    output_ptr: *const u8,
+    proof_ptr: *const u8,
+    threshold_ptr: *const u8,
+) -> VrfResult {
+    let public_key = create_public(slice::from_raw_parts(public_key_ptr, SR25519_PUBLIC_SIZE as usize));
+    let transcript = std::mem::transmute::<*const Strobe128, &mut Transcript>(transcript_data);
+    let given_out = match VRFOutput::from_bytes(
+        slice::from_raw_parts(output_ptr, SR25519_VRF_OUTPUT_SIZE as usize)) {
+        Ok(val) => val,
+        Err(err) => return VrfResult::create_err(&err)
+    };
+    let given_proof = match VRFProof::from_bytes(
+        slice::from_raw_parts(proof_ptr, SR25519_VRF_PROOF_SIZE as usize)) {
+        Ok(val) => val,
+        Err(err) => return VrfResult::create_err(&err)
+    };
+    let (in_out, _) =
+        match public_key.vrf_verify(transcript, &given_out, &given_proof) {
+            Ok(val) => val,
+            Err(err) => return VrfResult::create_err(&err)
+        };
+    let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
+
+    let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
+    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
+    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+    let threshold_int = u128::from_le_bytes(threshold_arr);
+
+    let check = u128::from_le_bytes(raw_output) < threshold_int;
+    VrfResult::create_val(check)
+}
+
 
 #[cfg(test)]
 pub mod tests {

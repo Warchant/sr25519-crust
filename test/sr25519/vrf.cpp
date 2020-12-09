@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "../utils.hpp"
 #include <array>
-#include <gtest/gtest.h>
 #include <string>
+
+#include <gtest/gtest.h>
+
+#include "../utils.hpp"
 
 extern "C" {
 #include <schnorrkel/schnorrkel.h>
@@ -69,4 +71,8 @@ TEST(VrfTest, SignAndCheck) {
                                message.data(), message.size(), limit.data());
   ASSERT_EQ(res1.result, SR25519_SIGNATURE_RESULT_OK);
   EXPECT_TRUE(res1.is_less);
+}
+
+TEST(VrfTest, SignAndVerifyTranscript) {
+
 }
