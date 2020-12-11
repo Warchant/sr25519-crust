@@ -115,5 +115,4 @@ TEST(VrfTest, SignAndVerifyTranscript) {
       out_and_proof.data() + SR25519_VRF_OUTPUT_SIZE, limit.data());
   ASSERT_EQ(res2.result, SR25519_SIGNATURE_RESULT_OK);
   ASSERT_EQ(less, res2.is_less);
-
 }

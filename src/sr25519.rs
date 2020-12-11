@@ -626,16 +626,21 @@ pub mod tests {
         assert_eq!(public, expected);
     }
 
-    #[test]
-    fn vrf_verify() {
+    fn make_test_keypair() -> Keypair {
         let seed = generate_random_seed();
         let mut keypair_bytes = [0u8; SR25519_KEYPAIR_SIZE as usize];
         unsafe { sr25519_keypair_from_seed(keypair_bytes.as_mut_ptr(), seed.as_ptr()) };
         let private = &keypair_bytes[0..SECRET_KEY_LENGTH];
         let public = &keypair_bytes[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+
+        Keypair::from_bytes(&keypair_bytes).expect("Keypair creation error")
+    }
+
+    #[test]
+    fn vrf_verify() {
+        let keypair = make_test_keypair();
         let message = b"Hello, world!";
 
-        let keypair = Keypair::from_bytes(&keypair_bytes).expect("Keypair creation error");
         let ctx = signing_context(SIGNING_CTX).bytes(message);
         let (io, proof, _) = keypair.vrf_sign(ctx.clone());
         let (io_, proof_) = keypair.public.vrf_verify(ctx.clone(), &io.to_output(), &proof).expect("Verification error");
@@ -645,7 +650,7 @@ pub mod tests {
         assert_eq!(proof, decomp_proof);
         unsafe {
             let threshold_bytes = [0u8; SR25519_VRF_THRESHOLD_SIZE as usize];
-            let res = sr25519_vrf_verify(public.as_ptr(),
+            let res = sr25519_vrf_verify(keypair.public.as_ref().as_ptr(),
                                          message.as_ptr(), message.len() as c_ulong,
                                          io.as_output_bytes().as_ptr(),
                                          proof.to_bytes().as_ptr(), threshold_bytes.as_ptr());
@@ -655,14 +660,9 @@ pub mod tests {
 
     #[test]
     fn vrf_verify_transcript() {
-        let seed = generate_random_seed();
-        let mut keypair_bytes = [0u8; SR25519_KEYPAIR_SIZE as usize];
-        unsafe { sr25519_keypair_from_seed(keypair_bytes.as_mut_ptr(), seed.as_ptr()) };
-        let private = &keypair_bytes[0..SECRET_KEY_LENGTH];
-        let public = &keypair_bytes[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+        let keypair = make_test_keypair();
         let message = b"Hello, world!";
 
-        let keypair = Keypair::from_bytes(&keypair_bytes).expect("Keypair creation error");
         let mut ctx = signing_context(SIGNING_CTX).bytes(message);
         let (io, proof, _) = keypair.vrf_sign(ctx.clone());
         let (io_, proof_) = keypair.public.vrf_verify(ctx.clone(), &io.to_output(), &proof).expect("Verification error");
@@ -672,7 +672,7 @@ pub mod tests {
         assert_eq!(proof, decomp_proof);
         unsafe {
             let threshold_bytes = [0u8; SR25519_VRF_THRESHOLD_SIZE as usize];
-            let res = sr25519_vrf_verify_transcript(public.as_ptr(),
+            let res = sr25519_vrf_verify_transcript(keypair.public.as_ref().as_ptr(),
                                                     std::mem::transmute::<&mut Transcript, *const Strobe128>(&mut ctx), io.as_output_bytes().as_ptr(),
                                                     proof.to_bytes().as_ptr(), threshold_bytes.as_ptr());
             assert_eq!(res.result, Sr25519SignatureResult::Ok);
