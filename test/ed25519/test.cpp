@@ -13,7 +13,7 @@ extern "C" {
 }
 
 TEST(Ed25519, GenerateKeypair) {
-  std::array<uint8_t, ED25519_KEYPAIR_LENGTH> keypair;
+  std::array<uint8_t, ED25519_KEYPAIR_LENGTH> keypair {};
   std::array<uint8_t, ED25519_SEED_LENGTH> seed = {42, 1, 2, 3, 4, 5};
   ed25519_keypair_from_seed(keypair.data(), seed.data());
   ASSERT_THAT(keypair, testing::Contains(testing::Not(0)));

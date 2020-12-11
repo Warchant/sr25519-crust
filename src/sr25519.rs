@@ -652,4 +652,30 @@ pub mod tests {
             assert_eq!(res.result, Sr25519SignatureResult::Ok);
         }
     }
+
+    #[test]
+    fn vrf_verify_transcript() {
+        let seed = generate_random_seed();
+        let mut keypair_bytes = [0u8; SR25519_KEYPAIR_SIZE as usize];
+        unsafe { sr25519_keypair_from_seed(keypair_bytes.as_mut_ptr(), seed.as_ptr()) };
+        let private = &keypair_bytes[0..SECRET_KEY_LENGTH];
+        let public = &keypair_bytes[SECRET_KEY_LENGTH..KEYPAIR_LENGTH];
+        let message = b"Hello, world!";
+
+        let keypair = Keypair::from_bytes(&keypair_bytes).expect("Keypair creation error");
+        let mut ctx = signing_context(SIGNING_CTX).bytes(message);
+        let (io, proof, _) = keypair.vrf_sign(ctx.clone());
+        let (io_, proof_) = keypair.public.vrf_verify(ctx.clone(), &io.to_output(), &proof).expect("Verification error");
+        assert_eq!(io_, io);
+        let decomp_proof = proof_.shorten_vrf(
+            &keypair.public, ctx.clone(), &io.to_output()).expect("Shorten VRF");
+        assert_eq!(proof, decomp_proof);
+        unsafe {
+            let threshold_bytes = [0u8; SR25519_VRF_THRESHOLD_SIZE as usize];
+            let res = sr25519_vrf_verify_transcript(public.as_ptr(),
+                                                    std::mem::transmute::<&mut Transcript, *const Strobe128>(&mut ctx), io.as_output_bytes().as_ptr(),
+                                                    proof.to_bytes().as_ptr(), threshold_bytes.as_ptr());
+            assert_eq!(res.result, Sr25519SignatureResult::Ok);
+        }
+    }
 }

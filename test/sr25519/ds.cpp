@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "../utils.hpp"
 #include <gtest/gtest.h>
+
+#include "../utils.hpp"
 
 extern "C" {
 #include <schnorrkel/schnorrkel.h>
 }
 
 TEST(sr25519, SignAndVerifyValid) {
-  auto kp = randomKeypair();
+  auto kp = randomKeypair(SR25519_KEYPAIR_SIZE, sr25519_keypair_from_seed);
   auto msg = "hello world"_v;
 
   std::vector<uint8_t> sig(SR25519_SIGNATURE_SIZE, 0);
@@ -27,7 +28,7 @@ TEST(sr25519, SignAndVerifyValid) {
 }
 
 TEST(sr25519, SignAndVerifyInvalid) {
-  auto kp = randomKeypair(0);
+  auto kp = randomKeypair(0, sr25519_keypair_from_seed);
   auto msg = "hello world"_v;
 
   std::vector<uint8_t> sig(SR25519_SIGNATURE_SIZE, 0);
