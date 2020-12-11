@@ -51,7 +51,7 @@ class Strobe final {
   static constexpr Flags kFlag_M = 0x10;
   static constexpr Flags kFlag_K = 0x20;
 
-  uint8_t raw_data[kBufferSize + kAlignment - 1ull + 3ull];
+  uint8_t raw_data_[kBufferSize + kAlignment - 1ull + 3ull];
   uint8_t *const buffer_;
 
   struct State {
@@ -143,7 +143,7 @@ class Strobe final {
 public:
   Strobe()
       : buffer_{reinterpret_cast<uint8_t *>(
-            roundUp<kAlignment>(reinterpret_cast<uintptr_t>(raw_data)))},
+            roundUp<kAlignment>(reinterpret_cast<uintptr_t>(raw_data_)))},
         state_{.current_position{*(buffer_ + kBufferSize)},
                .begin_position{*(buffer_ + kBufferSize + 1ull)},
                .current_state{*(buffer_ + kBufferSize + 2ull)}} {}

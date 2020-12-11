@@ -8,6 +8,7 @@ use schnorrkel::{
     derive::{CHAIN_CODE_LENGTH, ChainCode, Derivation}, ExpansionMode, Keypair, MiniSecretKey, PublicKey,
     SecretKey, Signature, SignatureError, vrf::{VRFOutput, VRFProof}};
 use std::fmt::{Formatter, Error};
+use std::convert::TryInto;
 
 // cbindgen has an issue with macros, so define it outside,
 // otherwise it would've been possible to avoid duplication of macro variant list
@@ -339,11 +340,8 @@ pub unsafe extern "C" fn sr25519_vrf_sign_if_less(
 
     ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
     ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
-    if check {
-        VrfResult::create_val(true)
-    } else {
-        VrfResult::create_val(false)
-    }
+
+    VrfResult::create_val(check)
 }
 
 /// Verify a signature produced by a VRF with its original input and the corresponding proof and
@@ -385,8 +383,10 @@ pub unsafe extern "C" fn sr25519_vrf_verify(
     let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
 
     let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
-    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
-    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+    let threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = match threshold.try_into() {
+        Ok(val) => val,
+        Err(err) => return VrfResult { result: Sr25519SignatureResult::BytesLengthError, is_less: false }
+    };
     let threshold_int = u128::from_le_bytes(threshold_arr);
 
     let check = u128::from_le_bytes(raw_output) < threshold_int;
@@ -449,11 +449,8 @@ pub unsafe extern "C" fn sr25519_vrf_sign_transcript(
 
     ptr::copy(io.to_output().as_bytes().as_ptr(), out_and_proof_ptr, SR25519_VRF_OUTPUT_SIZE as usize);
     ptr::copy(proof.to_bytes().as_ptr(), out_and_proof_ptr.add(SR25519_VRF_OUTPUT_SIZE as usize), SR25519_VRF_PROOF_SIZE as usize);
-    if check {
-        VrfResult::create_val(true)
-    } else {
-        VrfResult::create_val(false)
-    }
+
+    VrfResult::create_val(check)
 }
 
 /// Verify a signature produced by a VRF with its original input transcript and the corresponding proof and
@@ -494,8 +491,10 @@ pub unsafe extern "C" fn sr25519_vrf_verify_transcript(
     let raw_output = in_out.make_bytes::<[u8; SR25519_VRF_RAW_OUTPUT_SIZE as usize]>(BABE_VRF_PREFIX);
 
     let threshold = slice::from_raw_parts(threshold_ptr, SR25519_VRF_THRESHOLD_SIZE as usize);
-    let mut threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = Default::default();
-    threshold_arr.copy_from_slice(&threshold[0..SR25519_VRF_THRESHOLD_SIZE as usize]);
+    let threshold_arr: [u8; SR25519_VRF_THRESHOLD_SIZE as usize] = match threshold.try_into() {
+        Ok(val) => val,
+        Err(err) => return VrfResult { result: Sr25519SignatureResult::BytesLengthError, is_less: false }
+    };
     let threshold_int = u128::from_le_bytes(threshold_arr);
 
     let check = u128::from_le_bytes(raw_output) < threshold_int;
